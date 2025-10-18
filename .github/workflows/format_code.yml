@@ -55,6 +55,6 @@ jobs:
           unimport .
           echo "Unimport completed: Unused imports have been removed."
 
-    # Display success message at the end
-    - name: Success
-      run: echo "All formatting commands executed successfully!"
+      # Display success message at the end
+      - name: Success
+        run: echo "All formatting commands executed successfully!"
