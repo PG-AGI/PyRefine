@@ -3,27 +3,27 @@ name: Format Python Files
 on:
   push:
     branches:
-      - main  # Trigger the workflow on pushes to the 'main' branch
+      - main  
   pull_request:
     branches:
-      - main  # Trigger the workflow on pull requests to the 'main' branch
+      - main  
 
 jobs:
   format:
-    runs-on: ubuntu-latest  # Use the latest Ubuntu runner
+    runs-on: ubuntu-latest  
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2  # Check out the code from the repository
+        uses: actions/checkout@v2  
 
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.x'  # Use the latest Python 3 version
+          python-version: '3.x'  
 
       - name: Install dependencies
         run: |
-          pip install black isort autoflake autopep8 unimport  # Install required formatting tools
+          pip install black isort autoflake autopep8 unimport  
 
       - name: Run Black (Code Formatter)
         run: |
