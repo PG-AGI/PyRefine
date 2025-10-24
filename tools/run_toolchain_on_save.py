@@ -9,7 +9,6 @@ import sys
 from pathlib import Path
 from typing import Iterable, List, Sequence
 
-
 ROOT = Path(__file__).resolve().parents[1]
 ENV_DIR = ROOT / "env"
 ENV_BIN_SUBDIR = "Scripts" if os.name == "nt" else "bin"
@@ -124,7 +123,10 @@ def run_toolchain(files: Sequence[Path], check_mode: bool) -> None:
             continue
         executable = find_executable(tool)
         if not executable:
-            print(f"[toolchain] Skipping '{tool}': executable not found in PATH or env.", file=sys.stderr)
+            print(
+                f"[toolchain] Skipping '{tool}': executable not found in PATH or env.",
+                file=sys.stderr,
+            )
             continue
 
         for file_path in files:
@@ -168,7 +170,9 @@ def main() -> None:
         if default_target.exists():
             targets.append(default_target)
         else:
-            print("[toolchain] Nothing to format: could not resolve a target path.", file=sys.stderr)
+            print(
+                "[toolchain] Nothing to format: could not resolve a target path.", file=sys.stderr
+            )
             sys.exit(0)
 
     files = iter_python_files(targets)

@@ -1,0 +1,31 @@
+{
+    "editor.formatOnSave": true,
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true,
+            "source.fixAll": true
+        }
+    },
+    "python.languageServer": "Jedi",
+    "python.terminal.activateEnvironment": true,
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": [
+        "--line-length",
+        "100"
+    ],
+    "python.sortImports.args": [
+        "--profile",
+        "black"
+    ],
+    "python.linting.enabled": true,
+    "python.linting.flake8Enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.mypyEnabled": false,
+    "python.linting.banditEnabled": false,
+    "python.linting.ignorePatterns": [
+        "env/**",
+        "**/__pycache__/**"
+    ]
+}
