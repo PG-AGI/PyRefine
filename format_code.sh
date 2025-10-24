@@ -1,23 +1,20 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Run Black (Code Formatter)
-echo "Running black..."
-black test_py_scripts/main.py
+set -euo pipefail
 
-# Run Isort (Import Sorting)
-echo "Running isort..."
-isort test_py_scripts/main.py
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON_BIN="${PYTHON_BIN:-python}"
 
-# Run Autoflake (Remove Unused Imports and Variables)
-echo "Running autoflake..."
-autoflake --in-place --remove-all-unused-imports test_py_scripts/main.py
+if [[ -x "${SCRIPT_DIR}/env/Scripts/python.exe" ]]; then
+    PYTHON_BIN="${SCRIPT_DIR}/env/Scripts/python.exe"
+elif [[ -x "${SCRIPT_DIR}/env/bin/python" ]]; then
+    PYTHON_BIN="${SCRIPT_DIR}/env/bin/python"
+fi
 
-# Run Autopep8 (PEP 8 Formatting)
-echo "Running autopep8..."
-autopep8 --in-place --aggressive test_py_scripts/main.py
+if [[ $# -eq 0 ]]; then
+    set -- --workspace
+fi
 
-# Run Unimport (Remove Unused Imports)
-echo "Running unimport..."
-unimport test_py_scripts/main.py
-
-echo "All commands executed successfully!"
+echo "Running Python formatting toolchain via ${PYTHON_BIN}..."
+"${PYTHON_BIN}" "${SCRIPT_DIR}/tools/run_toolchain_on_save.py" "$@"
+echo "All linting and formatting tools executed successfully."

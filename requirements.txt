@@ -1,8 +1,14 @@
 yala
+ruff
 pylint
+mypy
+bandit
 black
-autopep8
-yapf
-autoflake
 isort
+autopep8
+autoflake
 unimport
+yapf
+typing_extensions
+pathspec
+platformdirs

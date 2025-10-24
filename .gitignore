@@ -1,3 +1,10 @@
+# dicrectories which are for testing
+.ruff_cache/
+crack-dev-backend/
+
+
+
+
 # Byte-compiled files
 *.pyc
 *.pyo
