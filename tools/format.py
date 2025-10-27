@@ -9,7 +9,6 @@ import sys
 from pathlib import Path
 from typing import Iterable, Sequence, Tuple
 
-
 PYREFINE_ROOT = Path(__file__).resolve().parents[1]
 PYREFINE_DIRNAME = PYREFINE_ROOT.name
 
@@ -111,7 +110,9 @@ def find_executable(name: str) -> str | None:
     search_dirs: list[Path] = []
     venv = os.environ.get("VIRTUAL_ENV")
     if venv:
-        search_dirs.append(Path(venv) / ("Scripts" if os.name == "nt" else "bin"))
+        search_dirs.append(
+            Path(venv) / ("Scripts" if os.name == "nt" else "bin")
+        )
     env_candidates = [
         PROJECT_ROOT / "env",
         PROJECT_ROOT / ".venv",
@@ -120,7 +121,9 @@ def find_executable(name: str) -> str | None:
     ]
     for env_dir in env_candidates:
         if env_dir.exists():
-            search_dirs.append(env_dir / ("Scripts" if os.name == "nt" else "bin"))
+            search_dirs.append(
+                env_dir / ("Scripts" if os.name == "nt" else "bin")
+            )
 
     for directory in search_dirs:
         if directory.exists():
@@ -168,7 +171,9 @@ def run_autoflake(targets: list[Path]) -> None:
 def run_isort(targets: list[Path]) -> None:
     executable = find_executable("isort")
     if executable is None:
-        raise RuntimeError("isort executable not found. Install dependencies first.")
+        raise RuntimeError(
+            "isort executable not found. Install dependencies first."
+        )
 
     run_subprocess(
         [
@@ -220,7 +225,9 @@ def run_autopep8(targets: list[Path]) -> None:
 def run_black(targets: list[Path]) -> None:
     executable = find_executable("black")
     if executable is None:
-        raise RuntimeError("black executable not found. Install dependencies first.")
+        raise RuntimeError(
+            "black executable not found. Install dependencies first."
+        )
 
     run_subprocess(
         [
@@ -235,7 +242,9 @@ def run_black(targets: list[Path]) -> None:
 def run_flake8(targets: list[Path]) -> None:
     executable = find_executable("flake8")
     if executable is None:
-        raise RuntimeError("flake8 executable not found. Install dependencies first.")
+        raise RuntimeError(
+            "flake8 executable not found. Install dependencies first."
+        )
 
     run_subprocess([executable, *map(str, targets)])
 

@@ -12,12 +12,13 @@ python tools/bootstrap.py
 - The script detects the project root (the parent directory that contains the `PyRefine` folder). Confirm the path or supply a different absolute path.
 - Cleaning runs the formatter across the project; creating scaffolds `src/`, `tests/`, `configs/`, and `scripts/`, installs dependencies (optional), then offers to format straight away.
 - The bootstrapper installs `requirements.txt`, attempts to install the recommended VS Code extensions, and removes conflicting ones (Pylint, Ruff, Pylance) when the `code` CLI is available.
+- Run `python tools/setup_workspace.py --force` afterwards to write the `.vscode/` workspace files into the selected project root so VS Code can trigger the on-save formatter for every Python file in the repository.
 
 ## 2. VS Code configuration
 
 The workspace already points VS Code to:
 
-- Format on save with **Black**, organised through **Isort**, using the shared automation.
+- Format on save with **Black**, organised through **Isort**, using the shared automation. If your VS Code workspace points at the parent project directory, run `python tools/setup_workspace.py --force` once to ensure the `.vscode/` folder exists with the correct on-save command.
 - Enable linting through the **Flake8** extension only.
 - Prefer the Jedi language server to avoid the Pylance linting overlap.
 
