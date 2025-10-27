@@ -1,6 +1,6 @@
 # Python Starter Template
 
-This repository provides a lightweight Python-first starter kit with opinionated formatting and a single linting standard (Flake8). Clone it into an existing codebase or use it to scaffold a new project structure in seconds.
+This repository provides a lightweight Python-first starter kit with opinionated formatting and a single linting standard (Flake8). Drop the `PyRefine` folder into any project and use the automation to clean or scaffold the codebase in minutes.
 
 ## 1. Bootstrap the workspace
 
@@ -8,15 +8,16 @@ This repository provides a lightweight Python-first starter kit with opinionated
 python tools/bootstrap.py
 ```
 
-- Choose **existing** if you dropped the template into an established project. The script offers to format everything immediately and lets you target additional files or folders on demand.
-- Choose **new** to generate a minimal structure (`src/`, `tests/`, `configs/`, `scripts/`) with starter files.
-- The bootstrapper installs `requirements.txt`, attempts to install recommended VS Code extensions, and uninstalls the conflicting ones (Pylint, Ruff, Pylance) when the `code` CLI is available.
+- First choose whether you want to **clean** the current repository or **create** a fresh project structure.
+- The script detects the project root (the parent directory that contains the `PyRefine` folder). Confirm the path or supply a different absolute path.
+- Cleaning runs the formatter across the project; creating scaffolds `src/`, `tests/`, `configs/`, and `scripts/`, installs dependencies (optional), then offers to format straight away.
+- The bootstrapper installs `requirements.txt`, attempts to install the recommended VS Code extensions, and removes conflicting ones (Pylint, Ruff, Pylance) when the `code` CLI is available.
 
 ## 2. VS Code configuration
 
 The workspace already points VS Code to:
 
-- Format on save with **Black** and organise imports with **Isort**.
+- Format on save with **Black**, organised through **Isort**, using the shared automation.
 - Enable linting through the **Flake8** extension only.
 - Prefer the Jedi language server to avoid the Pylance linting overlap.
 
@@ -26,11 +27,12 @@ Recommended extensions are declared in `.vscode/extensions.json`, while conflict
 
 Use the shared tooling whether you are in an editor or on the command line:
 
-- `./format_code.sh --all` formats every recognised project directory and runs Flake8.
-- `./format_code.sh path/to/file.py` or `./format_code.sh path/to/folder` narrows the scope.
-- Append `--check` to perform a dry run (Black/Isort), or `--lint-only` to run Flake8 without touching files.
+- `python tools/format.py all` (or `./format_code.sh`) processes the entire project using Black, Isort, Autoflake, Autopep8, and Flake8.
+- `python tools/format.py /absolute/path/to/file.py` formats a single file.
+- `python tools/format.py /absolute/path/to/directory` formats every Python file under the specified folder.
+- The script expects absolute paths for file and directory targets and exits without action if you omit arguments.
 
-Under the hood, both the shell helper and the VS Code setup call `tools/formatting.py`, which locates the preferred interpreter (project `env/` or active virtualenv) before invoking Black, Isort, and Flake8 in sequence.
+On file save, VS Code invokes the same script via the Run on Save extension, ensuring editor and CLI behaviour remain perfectly aligned.
 
 ## 4. Customising the template
 

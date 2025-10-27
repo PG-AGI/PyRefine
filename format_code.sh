@@ -12,9 +12,9 @@ elif [[ -x "${SCRIPT_DIR}/env/bin/python" ]]; then
 fi
 
 if [[ $# -eq 0 ]]; then
-    set -- --all
+    set -- all
 fi
 
 echo "Running Python formatting toolchain via ${PYTHON_BIN}..."
-"${PYTHON_BIN}" "${SCRIPT_DIR}/tools/formatting.py" "$@"
+"${PYTHON_BIN}" "${SCRIPT_DIR}/tools/format.py" "$@"
 echo "Formatting and linting completed successfully."

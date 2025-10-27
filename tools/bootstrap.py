@@ -2,20 +2,25 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Sequence
 
-ROOT = Path(__file__).resolve().parents[1]
-FORMATTER_SCRIPT = ROOT / "tools" / "formatting.py"
+
+PYREFINE_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_PROJECT_ROOT = PYREFINE_ROOT.parent
+
+FORMAT_SCRIPT = PYREFINE_ROOT / "tools" / "format.py"
 
 RECOMMENDED_EXTENSIONS: Sequence[str] = (
     "ms-python.python",
     "ms-python.black-formatter",
     "ms-python.isort",
     "ms-python.flake8",
+    "emeraldwalk.runonsave",
 )
 
 UNWANTED_EXTENSIONS: Sequence[str] = (
@@ -24,44 +29,38 @@ UNWANTED_EXTENSIONS: Sequence[str] = (
     "charliermarsh.ruff",
 )
 
-DEFAULT_DIRECTORIES: Sequence[Path] = (
-    ROOT / "src",
-    ROOT / "tests",
-    ROOT / "configs",
-    ROOT / "scripts",
-)
-
-DEFAULT_FILES: Sequence[tuple[Path, str]] = (
-    (ROOT / "src" / "__init__.py", ""),
-    (ROOT / "tests" / "__init__.py", ""),
-    (ROOT / "configs" / ".gitkeep", ""),
-    (ROOT / "scripts" / ".gitkeep", ""),
+STRUCTURE_DIRECTORIES: Sequence[str] = ("src", "tests", "configs", "scripts")
+STRUCTURE_FILES: Sequence[tuple[str, str]] = (
+    ("src/__init__.py", ""),
+    ("tests/__init__.py", ""),
+    ("configs/.gitkeep", ""),
+    ("scripts/.gitkeep", ""),
 )
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Bootstrap the Python starter template after cloning."
+        description="Bootstrap or clean a Python project using the PyRefine template."
     )
     parser.add_argument(
         "--mode",
-        choices=("new", "existing"),
-        help="Skip prompts and pick the project mode up front.",
+        choices=("clean", "create"),
+        help="Skip prompts by specifying the desired action up front.",
     )
     parser.add_argument(
         "--yes",
         action="store_true",
-        help="Assume the default answer for all prompts.",
+        help="Automatically accept the default answer for prompts.",
     )
     parser.add_argument(
         "--skip-extensions",
         action="store_true",
-        help="Do not attempt to manage VS Code extensions automatically.",
+        help="Do not attempt to install or remove VS Code extensions.",
     )
     parser.add_argument(
         "--skip-format",
         action="store_true",
-        help="Do not trigger any formatting during bootstrap.",
+        help="Skip automated formatting steps.",
     )
     parser.add_argument(
         "--skip-deps",
@@ -105,34 +104,45 @@ def ask_yes_no(question: str, assume_default: bool, default: bool = True) -> boo
         print("Please answer yes or no.")
 
 
-def ensure_project_structure() -> None:
-    for directory in DEFAULT_DIRECTORIES:
-        directory.mkdir(parents=True, exist_ok=True)
+def prompt_for_project_root(default_root: Path, assume_default: bool) -> Path:
+    print(f"Detected project root (parent directory of PyRefine): {default_root}")
+    if ask_yes_no("Use this directory?", assume_default, default=True):
+        return default_root
 
-    for file_path, contents in DEFAULT_FILES:
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        if not file_path.exists():
-            file_path.write_text(contents, encoding="utf-8")
+    while True:
+        user_input = input("Enter the absolute path to the project root: ").strip()
+        if not user_input:
+            print("Please provide a valid absolute path.")
+            continue
+        candidate = Path(user_input).expanduser()
+        if not candidate.is_absolute():
+            print("The provided path is not absolute. Please try again.")
+            continue
+        if not candidate.exists():
+            if ask_yes_no(
+                f"{candidate} does not exist. Create it?", assume_default, default=True
+            ):
+                candidate.mkdir(parents=True, exist_ok=True)
+            else:
+                continue
+        return candidate.resolve()
 
 
-def run_process(command: Sequence[str], *, cwd: Path | None = None) -> None:
-    subprocess.run(command, cwd=cwd, check=True)
+def run_process(
+    command: Sequence[str],
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+) -> None:
+    subprocess.run(command, check=True, cwd=cwd, env=env)
 
 
 def manage_extensions(skip_extensions: bool) -> None:
     if skip_extensions:
         return
 
-    code_cli = shutil.which("code")
+    code_cli = shutil.which("code") or shutil.which("code.cmd")
     if code_cli is None:
-        # Windows ships code.cmd; shutil.which will find it under "code"
-        code_cli = shutil.which("code.cmd")
-
-    if code_cli is None:
-        print(
-            "[bootstrap] VS Code CLI ('code') not found. Skipping extension management.",
-            file=sys.stderr,
-        )
+        print("[bootstrap] VS Code CLI ('code') not found. Skipping extension management.")
         return
 
     for extension in RECOMMENDED_EXTENSIONS:
@@ -145,51 +155,62 @@ def manage_extensions(skip_extensions: bool) -> None:
         try:
             run_process([code_cli, "--uninstall-extension", extension])
         except subprocess.CalledProcessError:
-            # Ext might already be absent; ignore.
+            # The extension may already be absent; ignore.
             pass
 
 
+def ensure_project_structure(project_root: Path) -> None:
+    for directory in STRUCTURE_DIRECTORIES:
+        (project_root / directory).mkdir(parents=True, exist_ok=True)
+
+    for relative_path, contents in STRUCTURE_FILES:
+        file_path = project_root / relative_path
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        if not file_path.exists():
+            file_path.write_text(contents, encoding="utf-8")
+
+
 def install_dependencies() -> None:
-    requirements = ROOT / "requirements.txt"
+    requirements = PYREFINE_ROOT / "requirements.txt"
     if not requirements.exists():
         return
-
-    try:
-        run_process([sys.executable, "-m", "pip", "install", "-r", str(requirements)])
-    except subprocess.CalledProcessError:
-        print("[bootstrap] Failed to install dependencies via pip.", file=sys.stderr)
-        raise
+    run_process([sys.executable, "-m", "pip", "install", "-r", str(requirements)])
 
 
-def format_entire_workspace() -> None:
-    run_process([sys.executable, str(FORMATTER_SCRIPT), "--all"])
+def format_entire_project(project_root: Path) -> None:
+    env = os.environ.copy()
+    env["PYREFINE_PROJECT_ROOT"] = str(project_root)
+    run_process([sys.executable, str(FORMAT_SCRIPT), "all"], env=env)
 
 
-def format_specific_path(target: str) -> None:
-    run_process([sys.executable, str(FORMATTER_SCRIPT), target])
+def format_specific_path(target: Path, project_root: Path) -> None:
+    env = os.environ.copy()
+    env["PYREFINE_PROJECT_ROOT"] = str(project_root)
+    run_process([sys.executable, str(FORMAT_SCRIPT), str(target)], env=env)
 
 
-def interactive_formatting(skip_format: bool, assume_default: bool) -> None:
+def interactive_formatting(
+    skip_format: bool,
+    assume_default: bool,
+    project_root: Path,
+) -> None:
     if skip_format:
         return
 
-    if ask_yes_no("Format the entire workspace now?", assume_default, default=True):
-        try:
-            format_entire_workspace()
-        except subprocess.CalledProcessError as error:
-            print(f"[bootstrap] Formatting failed (exit code {error.returncode}).", file=sys.stderr)
-
     while True:
-        if not ask_yes_no("Format an additional file or folder?", assume_default, default=False):
+        if not ask_yes_no("Format another file or folder?", assume_default, default=False):
             break
-        target = input("Enter the relative path to format: ").strip()
-        if not target:
+        target_input = input("Enter the absolute path to format: ").strip()
+        if not target_input:
             continue
+        candidate = Path(target_input).expanduser()
+        if not candidate.is_absolute():
+            candidate = (project_root / candidate).resolve()
         try:
-            format_specific_path(target)
+            format_specific_path(candidate, project_root)
         except subprocess.CalledProcessError as error:
             print(
-                f"[bootstrap] Formatting failed for {target!r} (exit code {error.returncode}).",
+                f"[bootstrap] Formatting failed for {candidate} (exit code {error.returncode}).",
                 file=sys.stderr,
             )
 
@@ -197,34 +218,58 @@ def interactive_formatting(skip_format: bool, assume_default: bool) -> None:
 def main() -> None:
     args = parse_args()
 
-    print("== Python Starter Template Bootstrap ==")
+    print("== PyRefine Bootstrap ==")
 
-    mode = args.mode or ask_choice(
-        "Are you configuring an existing codebase or starting a new project?",
-        ("existing", "new"),
+    action = args.mode or ask_choice(
+        "Do you want to clean an existing repository or create a new project structure?",
+        ("clean", "create"),
         args.yes,
     )
-    manage_extensions(args.skip_extensions)
 
-    if mode == "new":
-        if ask_yes_no(
-            "Generate the default project structure (src/, tests/, configs/, scripts/)?",
-            args.yes,
-            default=True,
-        ):
-            ensure_project_structure()
-            print("[bootstrap] Project structure ensured.")
-    else:
-        print("[bootstrap] Existing project mode selected.")
+    project_root = prompt_for_project_root(DEFAULT_PROJECT_ROOT, args.yes)
+    print(f"[bootstrap] Working against project root: {project_root}")
+
+    manage_extensions(args.skip_extensions)
 
     if not args.skip_deps:
         if ask_yes_no("Install Python dependencies from requirements.txt?", args.yes, default=True):
             try:
                 install_dependencies()
-            except subprocess.CalledProcessError:
-                pass
+            except subprocess.CalledProcessError as error:
+                print(
+                    f"[bootstrap] Dependency installation failed (exit code {error.returncode}).",
+                    file=sys.stderr,
+                )
 
-    interactive_formatting(args.skip_format, args.yes)
+    if action == "create":
+        if ask_yes_no(
+            "Generate the default project structure (src/, tests/, configs/, scripts/)?",
+            args.yes,
+            default=True,
+        ):
+            ensure_project_structure(project_root)
+            print("[bootstrap] Project structure created.")
+        if not args.skip_format:
+            if ask_yes_no("Format the new project now?", args.yes, default=True):
+                try:
+                    format_entire_project(project_root)
+                except subprocess.CalledProcessError as error:
+                    print(
+                        f"[bootstrap] Formatting failed (exit code {error.returncode}).",
+                        file=sys.stderr,
+                    )
+    else:
+        print("[bootstrap] Cleaning existing repository.")
+        if not args.skip_format:
+            try:
+                format_entire_project(project_root)
+            except subprocess.CalledProcessError as error:
+                print(
+                    f"[bootstrap] Formatting failed (exit code {error.returncode}).",
+                    file=sys.stderr,
+                )
+
+    interactive_formatting(args.skip_format, args.yes, project_root)
 
     print("Bootstrap complete. Happy coding!")
 
