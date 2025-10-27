@@ -28,7 +28,7 @@ Recommended extensions are declared in `.vscode/extensions.json`, while conflict
 
 Use the shared tooling whether you are in an editor or on the command line:
 
-- `python tools/format.py all` (or `./format_code.sh`) processes the entire project using Black, Isort, Autoflake, Autopep8, and Flake8.
+- `python tools/format.py all` processes the entire project using Black, Isort, Autoflake, Autopep8, and Flake8.
 - `python tools/format.py /absolute/path/to/file.py` formats a single file.
 - `python tools/format.py /absolute/path/to/directory` formats every Python file under the specified folder.
 - The script expects absolute paths for file and directory targets and exits without action if you omit arguments.
