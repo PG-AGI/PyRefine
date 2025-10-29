@@ -125,6 +125,7 @@ Notes:
 | `tools/bootstrap.py` | Guided setup: detects the project root, ensures the virtual environment has dependencies, manages VS Code extensions, creates scaffold folders, and optionally formats your code. |
 | `tools/setup_workspace.py` | Rewrites `.vscode/settings.json` and `.vscode/extensions.json` for any project root (useful when you open the parent folder in VS Code). |
 | `tools/format.py` | Core automation that runs Autoflake, Isort, Autopep8, Black, and Flake8. Used both from the CLI and by the VS Code on-save hook. |
+| `tools/pyrefine_cli.py` | Interactive CLI that guides you through cleanup, VS Code settings integration, and on-demand formatting. |
 | `.flake8` | Repository-wide lint configuration (line length 79, ignore standard caches). Adjust if you need custom rules. |
 | `requirements.txt` | Tooling dependencies to install into your environment. |
 | `.vscode/settings.json` & `.vscode/extensions.json` | Generated workspace files that configure format-on-save and recommended extensions. Recreate with `setup_workspace.py` if they are removed. |
