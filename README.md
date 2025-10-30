@@ -1,141 +1,109 @@
-# PyRefine Starter Guide
+# PyRefine Step-by-Step Guide
 
-Use this repository to drop a ready-to-go Python tooling stack into any project. Follow the steps below in order—each one builds on the previous and explains the prompts you will see.
-
----
-
-## Step 1 — Prepare (or create) your project repository
-
-- **Existing codebase**: confirm it is a Git repository and that you can run Python from the project root.
-- **New project**: create an empty directory, run `git init`, and decide where your application code will live.
-- From now on, we will call this directory the **project root**.
+PyRefine bundles formatting, linting, and VS Code configuration into a single workflow. Follow the steps below to drop it into any Python project and manage everything through one command.
 
 ---
 
-## Step 2 — Bring in PyRefine
+## Step 1. Prepare your project repository
 
-Inside the project root, clone or copy the PyRefine folder:
+- **Existing project**: make sure the repository is under Git and you can run Python from the project root.
+- **New project**: create a folder, run `git init`, and decide where your application code will live.
+
+Throughout this guide we will call that folder the **project root**.
+
+---
+
+## Step 2. Add PyRefine to the project
+
+From the project root, clone or copy the PyRefine folder:
 
 ```bash
 git clone https://github.com/PG-AGI/PyRefine.git
 ```
 
-Your tree should resemble:
-
-```
-your-project/
-├─ PyRefine/
-│  ├─ tools/
-│  ├─ .flake8
-│  └─ requirements.txt
-└─ (your application files)
-```
-
-Commit the `PyRefine` folder if you want the tooling tracked with your project.
+Commit the `PyRefine/` directory if you want the tooling tracked with your codebase.
 
 ---
 
-## Step 3 — Create (or reuse) a virtual environment
+## Step 3. Create and activate a virtual environment
 
-Keeping the tooling isolated from your global interpreter avoids version conflicts.
+Set up an isolated interpreter so PyRefine’s tools do not clash with your global site-packages:
 
 ```bash
-# from the project root
 python -m venv .venv
-
-# activate it
-source .venv/bin/activate        # macOS / Linux
+# Activate it
+source .venv/bin/activate        # macOS or Linux
 .\.venv\Scripts\activate         # Windows PowerShell
 ```
 
-Once activated, install the formatter and linter dependencies:
+Install the required tooling packages:
 
 ```bash
 pip install -r PyRefine/requirements.txt
 ```
 
-You can repeat this step for each machine that needs the tooling.
-
 ---
 
-## Step 4 — Bootstrap the workspace
+## Step 4. Run the PyRefine CLI (single entry point)
 
-Run the guided setup:
+Launch the interactive utility from the project root:
 
 ```bash
-python PyRefine/tools/bootstrap.py
+python PyRefine/tools/pyrefine_cli.py
 ```
 
-During execution you will see these prompts:
+You will be guided through three phases:
 
-| Prompt | Purpose | Typical answer |
-| --- | --- | --- |
-| `Do you want to clean an existing repository or create a new project structure?` | **clean** runs the formatter on existing code. **create** scaffolds `src`, `tests`, `configs`, `scripts`. | Depends on your project state |
-| `Detected project root ... Use this directory?` | Confirms the parent folder that will be formatted. You can provide another absolute path. | Usually `Y` |
-| `Install Python dependencies from requirements.txt?` | Installs Black, Isort, Autoflake, Autopep8, and Flake8 into the active virtual environment. | `Y` (recommended) |
-| `Generate the default project structure ... ?` *(create mode only)* | Builds the scaffold folders and placeholder files. | `Y` for new projects |
-| `Format the new project now?` | Offers an immediate formatting pass. | `Y` when ready |
-| `Format another file or folder?` | Lets you target extra paths right away. | `N` to finish |
+1. **Project structure setup**
+   - *Create new template*: scaffold `src/`, `tests/`, `configs/`, and `scripts/` folders with starter files.
+   - *Clean existing repository*: remove caches, build artifacts, and compiled files while keeping core folders.
+   - *Skip*: leave the repo exactly as it is.
+2. **VS Code on-save settings**
+   - One-line summary: `Enable VS Code on-save rules?` (Yes/No).
+   - Choose **Yes** to create or merge `.vscode/settings.json` and `.vscode/extensions.json`; choose **No** to leave existing settings untouched.
+3. **Formatting options**
+   - Decide whether to format a single file, process an entire folder recursively, or skip formatting for now.
 
-Behind the scenes the script also:
-
-- Suggests/installs VS Code extensions (Black, Isort, Flake8, Run on Save).
-- Removes conflicting ones (Pylint, Ruff, Pylance) if present.
-- Writes `.vscode/settings.json` and `.vscode/extensions.json` in the project root with the correct on-save command.
-- Sets `PYREFINE_PROJECT_ROOT` when invoking the formatter so the tools operate on the directory you approved.
-
-You can re-run the script later with flags such as `--mode clean`, `--skip-format`, or `--skip-deps` if you need to automate specific parts.
+Use `--project-root /absolute/path` to target another directory, and `--yes` to auto-accept default answers (handy for automation).
 
 ---
 
-## Step 5 — (Optional) Recreate workspace settings manually
+## Step 5. Optional commands
 
-If you delete or move the project and lose the `.vscode` folder, regenerate it with:
+- Recreate the VS Code workspace files at any time:
 
-```bash
-python PyRefine/tools/setup_workspace.py --project-root /abs/path/to/project --force
-```
+  ```bash
+  python PyRefine/tools/setup_workspace.py --project-root /absolute/path --force
+  ```
 
-Point `--project-root` to whichever folder you open in VS Code.
+- Run the formatter directly when you already know the scope:
+
+  ```bash
+  python PyRefine/tools/format.py all
+  python PyRefine/tools/format.py /absolute/path/to/file.py
+  python PyRefine/tools/format.py /absolute/path/to/folder
+  ```
 
 ---
 
-## Step 6 — Format and lint on demand
+## Reference: files included in PyRefine
 
-`tools/format.py` is the single entry point for automated cleanup:
-
-| Command | What it does |
+| Item | Purpose |
 | --- | --- |
-| `python PyRefine/tools/format.py all` | Runs Autoflake → Isort → Autopep8 → Black → Flake8 across the entire project (79-character line limit). |
-| `python PyRefine/tools/format.py /abs/path/to/file.py` | Formats and lints one file. |
-| `python PyRefine/tools/format.py /abs/path/to/folder` | Recursively processes all Python files under that folder. |
-| `python PyRefine/tools/format.py --lint-only ...` | Skips the formatters and runs only Flake8. |
-
-Notes:
-
-- All file and folder arguments must be absolute paths. If you omit them, the script exits without changes.
-- VS Code’s Run-on-Save extension invokes the same script when you save a Python file, so editor and CLI behaviour stay aligned.
-
----
-
-## Reference — What each file is for
-
-| File / folder | Purpose |
-| --- | --- |
-| `tools/bootstrap.py` | Guided setup: detects the project root, ensures the virtual environment has dependencies, manages VS Code extensions, creates scaffold folders, and optionally formats your code. |
-| `tools/setup_workspace.py` | Rewrites `.vscode/settings.json` and `.vscode/extensions.json` for any project root (useful when you open the parent folder in VS Code). |
-| `tools/format.py` | Core automation that runs Autoflake, Isort, Autopep8, Black, and Flake8. Used both from the CLI and by the VS Code on-save hook. |
-| `tools/pyrefine_cli.py` | Interactive CLI that guides you through cleanup, VS Code settings integration, and on-demand formatting. |
-| `.flake8` | Repository-wide lint configuration (line length 79, ignore standard caches). Adjust if you need custom rules. |
-| `requirements.txt` | Tooling dependencies to install into your environment. |
-| `.vscode/settings.json` & `.vscode/extensions.json` | Generated workspace files that configure format-on-save and recommended extensions. Recreate with `setup_workspace.py` if they are removed. |
+| `tools/pyrefine_cli.py` | Interactive CLI that orchestrates cleanup, VS Code setup, and formatting from one entry point. |
+| `tools/bootstrap.py` | Legacy guided script that still supports scaffold generation and bulk formatting. |
+| `tools/setup_workspace.py` | Writes or merges `.vscode/settings.json` and `.vscode/extensions.json` for a given project root. |
+| `tools/format.py` | Runs the Autoflake -> Isort -> Autopep8 -> Black -> Flake8 pipeline. Used by the CLI and by VS Code on save. |
+| `.flake8` | Shared lint configuration (79 character lines, cache directories ignored). |
+| `requirements.txt` | Tooling dependencies to install inside your virtual environment. |
+| `.vscode/` | Workspace defaults (format-on-save settings and extension recommendations). Recreated automatically if removed. |
 
 ---
 
 ## Next steps
 
-- Commit the `.vscode` folder and any scaffold files so teammates inherit the same configuration.
-- Add a CI job that runs `python PyRefine/tools/format.py all --lint-only` to keep pull requests clean.
-- Extend the tooling (for example, add SonarLint or Bandit) by editing `requirements.txt` and the scripts as needed.
+- Commit the updated `.vscode/` folder and any cleaned scaffolding so teammates inherit the same setup.
+- Add a CI job that runs `python PyRefine/tools/format.py all --lint-only` to keep pull requests consistent.
+- Explore advanced tooling (SonarLint, Bandit, type checkers) by extending `requirements.txt` and the CLI if needed.
 
-With these steps your project stays consistently formatted, linted, and ready for Python development on every machine. Happy coding!
+Run the CLI whenever you create or adopt a project to keep your Python repositories clean, consistent, and VS Code ready.

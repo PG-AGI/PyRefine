@@ -47,6 +47,14 @@ CLUTTER_FILE_PATTERNS: tuple[str, ...] = (
     "Thumbs.db",
 )
 
+TEMPLATE_DIRECTORIES: tuple[str, ...] = ("src", "tests", "configs", "scripts")
+TEMPLATE_FILES: tuple[tuple[str, str], ...] = (
+    ("src/__init__.py", ""),
+    ("tests/__init__.py", ""),
+    ("configs/.gitkeep", ""),
+    ("scripts/.gitkeep", ""),
+)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -95,6 +103,29 @@ def prompt_choice(
             if 1 <= numeric <= len(choices):
                 return numeric
         print("Please enter a valid option number.")
+
+
+def prompt_yes_no(
+    prompt: str,
+    default: bool | None = None,
+    auto_accept: bool = False,
+) -> bool:
+    if auto_accept and default is not None:
+        return default
+    suffix = ""
+    if default is True:
+        suffix = " [Y/n]"
+    elif default is False:
+        suffix = " [y/N]"
+    while True:
+        response = input(f"{prompt}{suffix}: ").strip().lower()
+        if not response and default is not None:
+            return default
+        if response in {"y", "yes"}:
+            return True
+        if response in {"n", "no"}:
+            return False
+        print("Please answer yes or no.")
 
 
 def is_under_excluded(path: Path, project_root: Path) -> bool:
@@ -154,6 +185,17 @@ def clean_repository(
             print(f"  - {path.relative_to(project_root)}")
     else:
         print("No cleanup required; repository is already tidy.")
+
+
+def create_project_template(project_root: Path) -> None:
+    for folder in TEMPLATE_DIRECTORIES:
+        (project_root / folder).mkdir(parents=True, exist_ok=True)
+    for relative_path, contents in TEMPLATE_FILES:
+        file_path = project_root / relative_path
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        if not file_path.exists():
+            file_path.write_text(contents, encoding="utf-8")
+    print("Created standard project template (src/, tests/, configs/, scripts/).")
 
 
 def ensure_virtual_environment(project_root: Path) -> None:
@@ -263,7 +305,6 @@ def prompt_formatting(project_root: Path, auto_accept: bool = False) -> None:
     options = [
         "Format a single Python file",
         "Format all files in a specific folder",
-        "Format the entire repository",
         "Skip formatting",
     ]
     choice = prompt_choice(
@@ -295,8 +336,6 @@ def prompt_formatting(project_root: Path, auto_accept: bool = False) -> None:
             print("The specified folder does not exist.")
             return
         run_formatter(str(target_path), project_root)
-    elif choice == 3:
-        run_formatter("all", project_root)
 
 
 def main() -> None:
@@ -306,29 +345,39 @@ def main() -> None:
 
     ensure_virtual_environment(project_root)
 
-    print("\nStep 1 - Repository cleaning:")
+    print("\nStep 1 - Project structure:")
     clean_options = [
+        "Create new Python template (src/, tests/, configs/, scripts/).",
         "Clean existing repository (remove caches, build artefacts, compiled files).",
-        "Preserve essential folders (e.g. concrete_tools/, src/, utils/) while cleaning clutter.",
-        "Skip cleaning.",
+        "Skip this step.",
     ]
     clean_choice = prompt_choice(
-        "Select a cleaning strategy",
+        "Select an option",
         clean_options,
-        default=2 if args.yes else None,
+        default=3,
         auto_accept=args.yes,
     )
+    created_template = False
     if clean_choice == 1:
-        clean_repository(project_root, preserve_essential=False)
+        create_project_template(project_root)
+        created_template = True
     elif clean_choice == 2:
         clean_repository(project_root, preserve_essential=True)
     else:
-        print("Skipping cleanup.")
+        print("Skipping project structure changes.")
 
-    print("\nStep 2 - VS Code settings integration:")
-    integrate_vscode_settings(project_root)
+    print("\nStep 2 - VS Code on-save settings:")
+    if prompt_yes_no(
+        "Create or update .vscode settings for PyRefine?",
+        default=True,
+        auto_accept=args.yes,
+    ):
+        integrate_vscode_settings(project_root)
+    else:
+        print("Skipped VS Code settings update.")
 
-    print("\nStep 3 - Manual formatting options:")
+    summary = "New template scaffold created." if created_template else "Existing structure retained."
+    print(f"\nStep 3 - Formatting options ({summary})")
     prompt_formatting(project_root, auto_accept=args.yes)
 
     print("\nPyRefine CLI complete.")
