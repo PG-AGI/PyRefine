@@ -4,13 +4,29 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import runpy
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-PYREFINE_ROOT = Path(__file__).resolve().parents[1]
-FORMAT_SCRIPT = PYREFINE_ROOT / "tools" / "format.py"
+
+def get_resource_root() -> Path:
+    """
+    Locate the PyRefine resource directory for both source and bundled runs.
+    """
+    bundle_dir = getattr(sys, "_MEIPASS", None)
+    if bundle_dir:
+        candidate = Path(bundle_dir) / "PyRefine"
+        if candidate.exists():
+            return candidate
+        return Path(bundle_dir)
+    return Path(__file__).resolve().parents[1]
+
+
+RESOURCE_ROOT = get_resource_root()
+FORMAT_SCRIPT = RESOURCE_ROOT / "tools" / "format.py"
+FLAKE8_TEMPLATE = RESOURCE_ROOT / ".flake8"
 
 # Directories we treat as part of the canonical scaffold
 TEMPLATE_DIRECTORIES: tuple[str, ...] = ("src", "tests", "configs", "scripts")
@@ -45,25 +61,37 @@ CLUTTER_FILE_PATTERNS: tuple[str, ...] = (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="PyRefine command-line utility for scaffolding, cleaning, and VS Code setup."
+        description=(
+            "PyRefine CLI for scaffolding, cleanup, and VS Code "
+            "setup."
+        )
     )
     parser.add_argument(
         "--project-root",
         type=Path,
         default=Path.cwd(),
-        help="Project root folder (defaults to the current working directory).",
+        help=(
+            "Project root folder (defaults to the current "
+            "working directory)."
+        ),
     )
     parser.add_argument(
         "--create",
         action="store_true",
-        help="Create the standard Python project scaffold (src/, tests/, configs/, scripts/).",
+        help=(
+            "Create the standard Python project scaffold "
+            "(src/, tests/, configs/, scripts/)."
+        ),
     )
     parser.add_argument(
         "--clean",
         nargs="?",
         const=".",
         metavar="PATH",
-        help="Format a file, folder, or the entire project (default: current project).",
+        help=(
+            "Format a file, folder, or the entire project (default: current "
+            "project)."
+        ),
     )
     parser.add_argument(
         "--setup",
@@ -82,7 +110,10 @@ def parse_args() -> argparse.Namespace:
     if actions == 0:
         parser.error("Please specify one of --create, --clean, or --setup.")
     if actions > 1:
-        parser.error("Please choose only one action at a time (--create, --clean, or --setup).")
+        parser.error(
+            "Please choose only one action at a time "
+            "(--create, --clean, or --setup)."
+        )
     return args
 
 
@@ -90,6 +121,15 @@ def ensure_absolute(path: Path, root: Path) -> Path:
     if path.is_absolute():
         return path
     return (root / path).resolve()
+
+
+def ensure_flake8_config(project_root: Path) -> None:
+    """Ensure the project has a .flake8 configuration file."""
+    if not FLAKE8_TEMPLATE.exists():
+        return
+    target = project_root / ".flake8"
+    if not target.exists():
+        shutil.copy2(FLAKE8_TEMPLATE, target)
 
 
 def create_scaffold(project_root: Path) -> None:
@@ -100,6 +140,7 @@ def create_scaffold(project_root: Path) -> None:
         file_path.parent.mkdir(parents=True, exist_ok=True)
         if not file_path.exists():
             file_path.write_text(contents, encoding="utf-8")
+    ensure_flake8_config(project_root)
     print(f"Created scaffold under {project_root}")
 
 
@@ -123,17 +164,36 @@ def remove_clutter(path: Path) -> None:
 
 
 def run_formatter(target: str, project_root: Path) -> None:
+    if not FORMAT_SCRIPT.exists():
+        print("Formatter script missing from resources; skipping formatting.")
+        return
+
     env = os.environ.copy()
     env["PYREFINE_PROJECT_ROOT"] = str(project_root)
-    command = [sys.executable, str(FORMAT_SCRIPT), target]
-    print(f"Running formatter: {' '.join(command)}")
-    subprocess.run(command, check=False, env=env)
+
+    if hasattr(sys, "_MEIPASS"):
+        previous_environ = os.environ.copy()
+        previous_argv = sys.argv[:]
+        try:
+            os.environ.update(env)
+            sys.argv = [str(FORMAT_SCRIPT), target]
+            print(f"Running formatter via embedded script: {FORMAT_SCRIPT}")
+            runpy.run_path(str(FORMAT_SCRIPT), run_name="__main__")
+        finally:
+            os.environ.clear()
+            os.environ.update(previous_environ)
+            sys.argv = previous_argv
+    else:
+        command = [sys.executable, str(FORMAT_SCRIPT), target]
+        print(f"Running formatter: {' '.join(command)}")
+        subprocess.run(command, check=False, env=env)
 
 
 def clean_target(project_root: Path, target_arg: str) -> None:
     target_path = ensure_absolute(Path(target_arg), project_root)
     if target_arg == "." or target_path == project_root:
         remove_clutter(project_root)
+        ensure_flake8_config(project_root)
         run_formatter("all", project_root)
         return
 
@@ -148,6 +208,7 @@ def clean_target(project_root: Path, target_arg: str) -> None:
 
     if target_path.is_dir():
         remove_clutter(target_path)
+        ensure_flake8_config(project_root)
         run_formatter(str(target_path), project_root)
         return
 
@@ -222,12 +283,22 @@ def formatter_reference(project_root: Path) -> str:
         return FORMAT_SCRIPT.as_posix()
 
 
-def merge_dict(base: dict[str, object], updates: dict[str, object]) -> dict[str, object]:
+def merge_dict(
+    base: dict[str, object], updates: dict[str, object]
+) -> dict[str, object]:
     result = dict(base)
     for key, value in updates.items():
-        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+        if (
+            key in result
+            and isinstance(result[key], dict)
+            and isinstance(value, dict)
+        ):
             result[key] = merge_dict(result[key], value)
-        elif key in result and isinstance(result[key], list) and isinstance(value, list):
+        elif (
+            key in result
+            and isinstance(result[key], list)
+            and isinstance(value, list)
+        ):
             combined = list(result[key])
             for item in value:
                 if item not in combined:
@@ -238,7 +309,9 @@ def merge_dict(base: dict[str, object], updates: dict[str, object]) -> dict[str,
     return result
 
 
-def merge_run_on_save(settings: dict[str, object], project_root: Path) -> dict[str, object]:
+def merge_run_on_save(
+    settings: dict[str, object], project_root: Path
+) -> dict[str, object]:
     commands_obj = settings.get("emeraldwalk.runonsave")
     if not isinstance(commands_obj, dict):
         return settings
@@ -246,7 +319,10 @@ def merge_run_on_save(settings: dict[str, object], project_root: Path) -> dict[s
     if not isinstance(commands, list):
         return settings
     desired_cmd = f'python "{formatter_reference(project_root)}" "${{file}}"'
-    if any(isinstance(entry, dict) and entry.get("cmd") == desired_cmd for entry in commands):
+    if any(
+        isinstance(entry, dict) and entry.get("cmd") == desired_cmd
+        for entry in commands
+    ):
         return settings
     commands.append(
         {
@@ -270,36 +346,51 @@ def integrate_vscode(project_root: Path) -> None:
 
     if settings_path.exists():
         try:
-            existing_settings = json.loads(settings_path.read_text(encoding="utf-8"))
+            existing_settings = json.loads(
+                settings_path.read_text(encoding="utf-8")
+            )
         except json.JSONDecodeError:
             existing_settings = {}
         merged_settings = merge_run_on_save(
             merge_dict(existing_settings, desired_settings),
             project_root,
         )
-        settings_path.write_text(json.dumps(merged_settings, indent=4) + "\n", encoding="utf-8")
+        settings_path.write_text(
+            json.dumps(merged_settings, indent=4) + "\n", encoding="utf-8"
+        )
         print(f"Merged settings into {settings_path}")
     else:
-        settings_path.write_text(json.dumps(desired_settings, indent=4) + "\n", encoding="utf-8")
+        settings_path.write_text(
+            json.dumps(desired_settings, indent=4) + "\n", encoding="utf-8"
+        )
         print(f"Created {settings_path}")
 
     if extensions_path.exists():
         try:
-            existing_extensions = json.loads(extensions_path.read_text(encoding="utf-8"))
+            existing_extensions = json.loads(
+                extensions_path.read_text(encoding="utf-8")
+            )
         except json.JSONDecodeError:
             existing_extensions = {}
         merged_extensions = merge_dict(existing_extensions, desired_extensions)
-        extensions_path.write_text(json.dumps(merged_extensions, indent=4) + "\n", encoding="utf-8")
+        extensions_path.write_text(
+            json.dumps(merged_extensions, indent=4) + "\n", encoding="utf-8"
+        )
         print(f"Merged extensions into {extensions_path}")
     else:
-        extensions_path.write_text(json.dumps(desired_extensions, indent=4) + "\n", encoding="utf-8")
+        extensions_path.write_text(
+            json.dumps(desired_extensions, indent=4) + "\n", encoding="utf-8"
+        )
         print(f"Created {extensions_path}")
 
 
 def handle_create(args: argparse.Namespace) -> None:
     project_root = args.project_root.resolve()
     create_scaffold(project_root)
-    print("Scaffold complete. Run 'python PyRefine/tools/pyrefine.py setup' to configure VS Code.")
+    print("Scaffold complete.")
+    print(
+        "Run 'python PyRefine/tools/pyrefine.py --setup' to configure VS Code."
+    )
 
 
 def handle_clean(args: argparse.Namespace) -> None:
@@ -326,7 +417,9 @@ def main() -> None:
     elif args.setup:
         handle_setup(args)
     else:
-        raise AssertionError("Unreachable: at least one action must be specified.")
+        raise AssertionError(
+            "Unreachable: at least one action must be specified."
+        )
 
 
 if __name__ == "__main__":

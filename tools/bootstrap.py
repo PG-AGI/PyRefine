@@ -10,7 +10,6 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-
 PYREFINE_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PROJECT_ROOT = PYREFINE_ROOT.parent
 
@@ -299,14 +298,16 @@ def install_dependencies() -> None:
     requirements = PYREFINE_ROOT / "requirements.txt"
     if not requirements.exists():
         return
-    run_process([
-        sys.executable,
-        "-m",
-        "pip",
-        "install",
-        "-r",
-        str(requirements),
-    ])
+    run_process(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "-r",
+            str(requirements),
+        ]
+    )
 
 
 def format_entire_project(project_root: Path) -> None:

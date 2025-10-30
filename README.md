@@ -54,6 +54,8 @@ All automation now lives in one command with three flags. Run them from the proj
 | `python PyRefine/tools/pyrefine.py --clean [path]` | Formats a file, directory, or the entire project (`.`). Directories are tidied (caches removed) before the Autoflake -> Isort -> Autopep8 -> Black -> Flake8 pipeline runs. |
 | `python PyRefine/tools/pyrefine.py --setup` | Creates or merges `.vscode/settings.json` and `.vscode/extensions.json` so VS Code runs PyRefine's formatting on save. |
 
+Running `--create` also drops a `.flake8` file into your project if one is not already present so that formatting rules are available immediately.
+
 Use `--project-root /absolute/path` with any command to target a different repository.
 
 ---
@@ -76,6 +78,13 @@ Use `--project-root /absolute/path` with any command to target a different repos
 
 ---
 
+
+## Step 6. Build a standalone executable (optional)
+
+1. Activate your virtual environment and install PyInstaller: `pip install pyinstaller`.
+2. Run `python PyRefine/tools/build_exe.py`.
+3. The packaged binary (`pyrefine.exe`) will be created inside the `dist/` directory. Move or distribute it as needed.
+
 ## Reference: files included in PyRefine
 
 | Item | Purpose |
@@ -87,6 +96,7 @@ Use `--project-root /absolute/path` with any command to target a different repos
 | `.flake8` | Shared lint configuration (79 character lines, cache directories ignored). |
 | `requirements.txt` | Tooling dependencies to install inside your virtual environment. |
 | `.vscode/` | Workspace defaults (format-on-save settings and extension recommendations). Recreated automatically if removed. |
+| `tools/build_exe.py` | Convenience wrapper around PyInstaller to produce `pyrefine.exe`. |
 
 ---
 

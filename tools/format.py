@@ -48,7 +48,8 @@ def parse_args() -> argparse.Namespace:
         description=(
             "Format and lint Python code. "
             "Run without arguments to do nothing. "
-            "Pass 'all' to process the entire project, or an absolute path to a file or directory."
+            "Pass 'all' to process the entire project, or an absolute path "
+            "to a file or directory."
         )
     )
     parser.add_argument(

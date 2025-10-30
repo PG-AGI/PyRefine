@@ -3,20 +3,33 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
-PYREFINE_ROOT = Path(__file__).resolve().parents[1]
-FORMAT_SCRIPT = PYREFINE_ROOT / "tools" / "format.py"
+
+def get_resource_root() -> Path:
+    bundle_dir = getattr(sys, "_MEIPASS", None)
+    if bundle_dir:
+        candidate = Path(bundle_dir) / "PyRefine"
+        if candidate.exists():
+            return candidate
+        return Path(bundle_dir)
+    return Path(__file__).resolve().parents[1]
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Write VS Code workspace settings for PyRefine."
+        description=(
+            "Write VS Code workspace settings for PyRefine."
+        )
     )
     parser.add_argument(
         "--project-root",
         type=Path,
-        help="Project root directory (defaults to PyRefine parent).",
+        help=(
+            "Project root directory (defaults to the current working "
+            "directory)."
+        ),
     )
     parser.add_argument(
         "--force",
@@ -26,16 +39,17 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def formatter_reference(project_root: Path) -> str:
+def formatter_reference(project_root: Path, format_script: Path) -> str:
     try:
-        relative = FORMAT_SCRIPT.relative_to(project_root)
+        relative = format_script.relative_to(project_root)
         return f"${{workspaceFolder}}/{relative.as_posix()}"
     except ValueError:
-        return FORMAT_SCRIPT.as_posix()
+        return format_script.as_posix()
 
 
-def build_settings(project_root: Path) -> dict[str, object]:
-    command = f'python "{formatter_reference(project_root)}" "${{file}}"'
+def build_settings(project_root: Path, format_script: Path) -> dict[str, object]:
+    formatter_cmd = formatter_reference(project_root, format_script)
+    command = f'python "{formatter_cmd}" "${{file}}"'
     return {
         "editor.formatOnSave": True,
         "[python]": {
@@ -108,15 +122,16 @@ def write_json(path: Path, payload: dict[str, object]) -> None:
 
 def main() -> None:
     args = parse_args()
-    project_root = args.project_root or PYREFINE_ROOT.parent
-    project_root = project_root.resolve()
+    project_root = (args.project_root or Path.cwd()).resolve()
+    resource_root = get_resource_root()
+    format_script = resource_root / "tools" / "format.py"
 
     settings_dir = project_root / ".vscode"
     settings_dir.mkdir(parents=True, exist_ok=True)
 
     settings_path = settings_dir / "settings.json"
     if confirm(settings_path, args.force, "settings.json"):
-        write_json(settings_path, build_settings(project_root))
+        write_json(settings_path, build_settings(project_root, format_script))
 
     extensions_path = settings_dir / "extensions.json"
     if confirm(extensions_path, args.force, "extensions.json"):
