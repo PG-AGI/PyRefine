@@ -27,7 +27,7 @@ Commit the `PyRefine/` directory if you want the tooling tracked with your codeb
 
 ## Step 3. Create and activate a virtual environment
 
-Set up an isolated interpreter so PyRefine’s tools do not clash with your global site-packages:
+Set up an isolated interpreter so PyRefine's tools do not clash with your global site-packages:
 
 ```bash
 python -m venv .venv
@@ -44,27 +44,17 @@ pip install -r PyRefine/requirements.txt
 
 ---
 
-## Step 4. Run the PyRefine CLI (single entry point)
+## Step 4. Use the PyRefine CLI (single entry point)
 
-Launch the interactive utility from the project root:
+All automation now lives in one command with three flags. Run them from the project root:
 
-```bash
-python PyRefine/tools/pyrefine_cli.py
-```
+| Command | Purpose |
+| --- | --- |
+| `python PyRefine/tools/pyrefine.py --create` | Creates the standard Python scaffold (`src/`, `tests/`, `configs/`, `scripts/` + starter files). |
+| `python PyRefine/tools/pyrefine.py --clean [path]` | Formats a file, directory, or the entire project (`.`). Directories are tidied (caches removed) before the Autoflake -> Isort -> Autopep8 -> Black -> Flake8 pipeline runs. |
+| `python PyRefine/tools/pyrefine.py --setup` | Creates or merges `.vscode/settings.json` and `.vscode/extensions.json` so VS Code runs PyRefine's formatting on save. |
 
-You will be guided through three phases:
-
-1. **Project structure setup**
-   - *Create new template*: scaffold `src/`, `tests/`, `configs/`, and `scripts/` folders with starter files.
-   - *Clean existing repository*: remove caches, build artifacts, and compiled files while keeping core folders.
-   - *Skip*: leave the repo exactly as it is.
-2. **VS Code on-save settings**
-   - One-line summary: `Enable VS Code on-save rules?` (Yes/No).
-   - Choose **Yes** to create or merge `.vscode/settings.json` and `.vscode/extensions.json`; choose **No** to leave existing settings untouched.
-3. **Formatting options**
-   - Decide whether to format a single file, process an entire folder recursively, or skip formatting for now.
-
-Use `--project-root /absolute/path` to target another directory, and `--yes` to auto-accept default answers (handy for automation).
+Use `--project-root /absolute/path` with any command to target a different repository.
 
 ---
 
@@ -90,7 +80,7 @@ Use `--project-root /absolute/path` to target another directory, and `--yes` to 
 
 | Item | Purpose |
 | --- | --- |
-| `tools/pyrefine_cli.py` | Interactive CLI that orchestrates cleanup, VS Code setup, and formatting from one entry point. |
+| `tools/pyrefine.py` | Command-line utility providing --create, --clean, and --setup actions for project scaffolding, formatting, and VS Code integration. |
 | `tools/bootstrap.py` | Legacy guided script that still supports scaffold generation and bulk formatting. |
 | `tools/setup_workspace.py` | Writes or merges `.vscode/settings.json` and `.vscode/extensions.json` for a given project root. |
 | `tools/format.py` | Runs the Autoflake -> Isort -> Autopep8 -> Black -> Flake8 pipeline. Used by the CLI and by VS Code on save. |
