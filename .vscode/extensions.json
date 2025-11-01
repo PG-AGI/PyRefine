@@ -1,14 +1,14 @@
 {
-    "recommendations": [
-        "ms-python.python",
-        "ms-python.black-formatter",
-        "ms-python.isort",
-        "ms-python.flake8",
-        "emeraldwalk.runonsave"
-    ],
-    "unwantedRecommendations": [
-        "ms-python.pylint",
-        "ms-python.vscode-pylance",
-        "charliermarsh.ruff"
-    ]
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.black-formatter",
+    "ms-python.isort",
+    "ms-python.flake8",
+    "emeraldwalk.runonsave"
+  ],
+  "unwantedRecommendations": [
+    "ms-python.pylint",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff"
+  ]
 }

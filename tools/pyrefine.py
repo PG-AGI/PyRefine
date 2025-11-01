@@ -62,8 +62,7 @@ CLUTTER_FILE_PATTERNS: tuple[str, ...] = (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "PyRefine CLI for scaffolding, cleanup, and VS Code "
-            "setup."
+            "PyRefine CLI for scaffolding, cleanup, and VS Code " "setup."
         )
     )
     parser.add_argument(
@@ -107,13 +106,13 @@ def parse_args() -> argparse.Namespace:
             1 if args.setup else 0,
         ]
     )
-    if actions == 0:
-        parser.error("Please specify one of --create, --clean, or --setup.")
     if actions > 1:
         parser.error(
             "Please choose only one action at a time "
             "(--create, --clean, or --setup)."
         )
+    if actions == 0:
+        args.clean = "."
     return args
 
 

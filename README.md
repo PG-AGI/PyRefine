@@ -48,11 +48,13 @@ pip install -r PyRefine/requirements.txt
 
 All automation now lives in one command with three flags. Run them from the project root:
 
-| Command | Purpose |
-| --- | --- |
-| `python PyRefine/tools/pyrefine.py --create` | Creates the standard Python scaffold (`src/`, `tests/`, `configs/`, `scripts/` + starter files). |
+| Command                                            | Purpose                                                                                                                                                                     |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `python PyRefine/tools/pyrefine.py --create`       | Creates the standard Python scaffold (`src/`, `tests/`, `configs/`, `scripts/` + starter files).                                                                            |
 | `python PyRefine/tools/pyrefine.py --clean [path]` | Formats a file, directory, or the entire project (`.`). Directories are tidied (caches removed) before the Autoflake -> Isort -> Autopep8 -> Black -> Flake8 pipeline runs. |
-| `python PyRefine/tools/pyrefine.py --setup` | Creates or merges `.vscode/settings.json` and `.vscode/extensions.json` so VS Code runs PyRefine's formatting on save. |
+| `python PyRefine/tools/pyrefine.py --setup`        | Creates or merges `.vscode/settings.json` and `.vscode/extensions.json` so VS Code runs PyRefine's formatting on save.                                                      |
+
+Running `pyrefine.exe` with no flags defaults to `--clean .`, so the entire repository is tidied and formatted automatically.
 
 Running `--create` also drops a `.flake8` file into your project if one is not already present so that formatting rules are available immediately.
 
@@ -78,7 +80,6 @@ Use `--project-root /absolute/path` with any command to target a different repos
 
 ---
 
-
 ## Step 6. Build a standalone executable (optional)
 
 1. Activate your virtual environment and install PyInstaller: `pip install pyinstaller`.
@@ -87,16 +88,16 @@ Use `--project-root /absolute/path` with any command to target a different repos
 
 ## Reference: files included in PyRefine
 
-| Item | Purpose |
-| --- | --- |
-| `tools/pyrefine.py` | Command-line utility providing --create, --clean, and --setup actions for project scaffolding, formatting, and VS Code integration. |
-| `tools/bootstrap.py` | Legacy guided script that still supports scaffold generation and bulk formatting. |
-| `tools/setup_workspace.py` | Writes or merges `.vscode/settings.json` and `.vscode/extensions.json` for a given project root. |
-| `tools/format.py` | Runs the Autoflake -> Isort -> Autopep8 -> Black -> Flake8 pipeline. Used by the CLI and by VS Code on save. |
-| `.flake8` | Shared lint configuration (79 character lines, cache directories ignored). |
-| `requirements.txt` | Tooling dependencies to install inside your virtual environment. |
-| `.vscode/` | Workspace defaults (format-on-save settings and extension recommendations). Recreated automatically if removed. |
-| `tools/build_exe.py` | Convenience wrapper around PyInstaller to produce `pyrefine.exe`. |
+| Item                       | Purpose                                                                                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `tools/pyrefine.py`        | Command-line utility providing --create, --clean, and --setup actions for project scaffolding, formatting, and VS Code integration. |
+| `tools/bootstrap.py`       | Legacy guided script that still supports scaffold generation and bulk formatting.                                                   |
+| `tools/setup_workspace.py` | Writes or merges `.vscode/settings.json` and `.vscode/extensions.json` for a given project root.                                    |
+| `tools/format.py`          | Runs the Autoflake -> Isort -> Autopep8 -> Black -> Flake8 pipeline. Used by the CLI and by VS Code on save.                        |
+| `.flake8`                  | Shared lint configuration (79 character lines, cache directories ignored).                                                          |
+| `requirements.txt`         | Tooling dependencies to install inside your virtual environment.                                                                    |
+| `.vscode/`                 | Workspace defaults (format-on-save settings and extension recommendations). Recreated automatically if removed.                     |
+| `tools/build_exe.py`       | Convenience wrapper around PyInstaller to produce `pyrefine.exe`.                                                                   |
 
 ---
 

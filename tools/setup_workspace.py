@@ -19,9 +19,7 @@ def get_resource_root() -> Path:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Write VS Code workspace settings for PyRefine."
-        )
+        description=("Write VS Code workspace settings for PyRefine.")
     )
     parser.add_argument(
         "--project-root",
@@ -47,7 +45,9 @@ def formatter_reference(project_root: Path, format_script: Path) -> str:
         return format_script.as_posix()
 
 
-def build_settings(project_root: Path, format_script: Path) -> dict[str, object]:
+def build_settings(
+    project_root: Path, format_script: Path
+) -> dict[str, object]:
     formatter_cmd = formatter_reference(project_root, format_script)
     command = f'python "{formatter_cmd}" "${{file}}"'
     return {
