@@ -28,6 +28,73 @@ RESOURCE_ROOT = get_resource_root()
 FORMAT_SCRIPT = RESOURCE_ROOT / "tools" / "format.py"
 FLAKE8_TEMPLATE = RESOURCE_ROOT / ".flake8"
 
+PYLANCE_EXTENSION_ID = "ms-python.vscode-pylance"
+
+
+def pylance_installed() -> bool:
+    """
+    Check whether the VS Code Pylance extension is available.
+
+    First tries the VS Code CLI (`code --list-extensions`), then falls back to
+    scanning common extension directories.
+    """
+    for cmd in ("code", "code-insiders"):
+        exe = shutil.which(cmd)
+        if not exe:
+            continue
+        try:
+            result = subprocess.run(
+                [exe, "--list-extensions"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            if PYLANCE_EXTENSION_ID.lower() in result.stdout.lower():
+                return True
+            return False
+        except subprocess.CalledProcessError:
+            continue
+
+    candidates: list[Path] = []
+    home = Path.home()
+    candidates.append(home / ".vscode" / "extensions")
+    candidates.append(home / ".vscode-insiders" / "extensions")
+    user_profile = Path(os.environ.get("USERPROFILE", home))
+    candidates.append(user_profile / ".vscode" / "extensions")
+    for base in candidates:
+        if base.exists():
+            for child in base.iterdir():
+                if child.is_dir() and child.name.startswith(PYLANCE_EXTENSION_ID):
+                    return True
+    return False
+
+
+def notify_pylance_missing() -> None:
+    """
+    Emit a console notice and, on Windows, a popup encouraging Pylance install.
+    """
+    message = (
+        "The Pylance extension (ms-python.vscode-pylance) was not detected.\n"
+        "Installing it is highly recommended for richer IntelliSense, smarter autocompletion, and an improved Python development experience.\n\n"
+        "Marketplace link:\n"
+        "https://marketplace.visualstudio.com/items?itemName="
+        "ms-python.vscode-pylance"
+    )
+    print(f"NOTICE: {message}")
+    if os.name == "nt":
+        try:
+            import ctypes
+
+            ctypes.windll.user32.MessageBoxW(  # type: ignore[attr-defined]
+                None,
+                message,
+                "PyRefine Recommendation",
+                0x00000040,
+            )
+        except Exception:
+            pass
+
+
 # Directories we treat as part of the canonical scaffold
 TEMPLATE_DIRECTORIES: tuple[str, ...] = ("src", "tests", "configs", "scripts")
 TEMPLATE_FILES: tuple[tuple[str, str], ...] = (
@@ -264,13 +331,10 @@ def build_extensions_payload() -> dict[str, object]:
             "ms-python.black-formatter",
             "ms-python.isort",
             "ms-python.flake8",
+            "ms-python.vscode-pylance",
             "emeraldwalk.runonsave",
         ],
-        "unwantedRecommendations": [
-            "ms-python.pylint",
-            "ms-python.vscode-pylance",
-            "charliermarsh.ruff",
-        ],
+        "unwantedRecommendations": ["ms-python.pylint", "charliermarsh.ruff"],
     }
 
 
@@ -381,6 +445,14 @@ def integrate_vscode(project_root: Path) -> None:
             json.dumps(desired_extensions, indent=4) + "\n", encoding="utf-8"
         )
         print(f"Created {extensions_path}")
+    if not pylance_installed():
+        print(
+            "NOTICE: The Pylance extension (ms-python.vscode-pylance) was not "
+            "detected. Installing it is highly recommended for richer "
+            "IntelliSense, smarter autocompletion, and an improved Python development experience:\n"
+            "https://marketplace.visualstudio.com/items?itemName="
+            "ms-python.vscode-pylance"
+        )
 
 
 def handle_create(args: argparse.Namespace) -> None:

@@ -53,6 +53,9 @@ All automation now lives in one command with three flags. Run them from the proj
 | `python PyRefine/tools/pyrefine.py --create`       | Creates the standard Python scaffold (`src/`, `tests/`, `configs/`, `scripts/` + starter files).                                                                            |
 | `python PyRefine/tools/pyrefine.py --clean [path]` | Formats a file, directory, or the entire project (`.`). Directories are tidied (caches removed) before the Autoflake -> Isort -> Autopep8 -> Black -> Flake8 pipeline runs. |
 | `python PyRefine/tools/pyrefine.py --setup`        | Creates or merges `.vscode/settings.json` and `.vscode/extensions.json` so VS Code runs PyRefine's formatting on save.                                                      |
+Running `pyrefine.exe` with no flags defaults to `--clean .`, so the entire repository is tidied and formatted automatically.
+If Pylance is missing from your VS Code extensions, the CLI shows a reminder (and on Windows a popup) recommending installation for better IntelliSense and autocompletion.
+
 
 Running `pyrefine.exe` with no flags defaults to `--clean .`, so the entire repository is tidied and formatted automatically.
 
