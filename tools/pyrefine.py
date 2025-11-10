@@ -6,7 +6,6 @@ import hashlib
 import json
 import os
 import runpy
-import shlex
 import shutil
 import subprocess
 import sys
@@ -15,7 +14,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.0"
 # Optional default manifest URL. Override via --manifest-url or the
 # PYREFINE_UPDATE_URL environment variable.
 DEFAULT_MANIFEST_URL = os.environ.get("PYREFINE_UPDATE_URL")
@@ -77,7 +76,9 @@ def pylance_installed() -> bool:
     for base in candidates:
         if base.exists():
             for child in base.iterdir():
-                if child.is_dir() and child.name.startswith(PYLANCE_EXTENSION_ID):
+                if child.is_dir() and child.name.startswith(
+                    PYLANCE_EXTENSION_ID
+                ):
                     return True
     return False
 
@@ -220,7 +221,9 @@ def download_release_binary(url: str, checksum: str) -> Path:
                     hasher.update(chunk)
                 temp_path = Path(temp_file.name)
     except urllib.error.URLError as exc:
-        raise UpdateError(f"Failed to download update artifact: {exc}") from exc
+        raise UpdateError(
+            f"Failed to download update artifact: {exc}"
+        ) from exc
 
     expected_algo, expected_digest = _normalise_checksum(checksum)
     if expected_algo != CHECKSUM_ALGORITHM:
@@ -259,7 +262,7 @@ def schedule_windows_replace(target: Path, staged_binary: Path) -> None:
         "    goto retry\r\n"
         ")\r\n"
         'move /Y "%SOURCE%" "%TARGET%" >nul 2>&1\r\n'
-        'if errorlevel 1 (\r\n'
+        "if errorlevel 1 (\r\n"
         "    timeout /T 1 /NOBREAK >nul\r\n"
         "    goto retry\r\n"
         ")\r\n"
@@ -278,7 +281,9 @@ def schedule_windows_replace(target: Path, staged_binary: Path) -> None:
     )
 
 
-def apply_update_binary(current_executable: Path, downloaded_path: Path) -> None:
+def apply_update_binary(
+    current_executable: Path, downloaded_path: Path
+) -> None:
     """
     Replace the current executable with the freshly downloaded one.
     """
