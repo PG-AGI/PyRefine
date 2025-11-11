@@ -2,8 +2,8 @@ name: Build PyRefine Binaries
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - feature/multi-platform-build
 
 jobs:
   build:
