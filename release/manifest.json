@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.0.1",
   "artifacts": {
     "windows": {
       "url": "https://github.com/PG-AGI/PyRefine/releases/download/test/pyrefine.exe",
