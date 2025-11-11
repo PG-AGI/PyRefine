@@ -2,8 +2,8 @@
   "version": "1.0",
   "artifacts": {
     "windows": {
-      "url": "https://github.com/PG-AGI/PyRefine/releases/download/1.0/pyrefine.exe",
-      "checksum": "sha256:C555332FC92178F1A6E05569F74A7627913BD34B73BE077DC8BED47B84DE5565"
+      "url": "https://github.com/PG-AGI/PyRefine/releases/download/test/pyrefine.exe",
+      "checksum": "sha256:2E6796E924C0C8434889C2C5948AB126CE2E9C94C91628468C0915E94FB4C59B"
     }
   },
   "release_notes": "Optional text shown after a successful update."
