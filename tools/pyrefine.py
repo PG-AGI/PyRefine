@@ -17,7 +17,7 @@ from pathlib import Path
 APP_VERSION = "1.0"
 # Optional default manifest URL. Override via --manifest-url or the
 # PYREFINE_UPDATE_URL environment variable.
-DEFAULT_MANIFEST_URL = os.environ.get("PYREFINE_UPDATE_URL")
+DEFAULT_MANIFEST_URL = "https://raw.githubusercontent.com/PG-AGI/PyRefine/pyrefine.exe/release/manifest.json"
 DOWNLOAD_BUFFER_SIZE = 64 * 1024
 CHECKSUM_ALGORITHM = "sha256"
 WINDOWS = os.name == "nt"
