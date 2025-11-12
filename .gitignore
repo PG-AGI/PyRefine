@@ -18,6 +18,7 @@ ENV/
 .venv/
 PyRefine_env/
 manifests/
+.env
 
 # Distribution / packaging
 .Python
