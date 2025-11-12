@@ -1,0 +1,113 @@
+name: Build PyRefine Binaries
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - feature/multi-platform-build
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Binary
+        run: |
+          python tools/build_exe.py
+
+      - name: Rename artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Rename-Item -Path "dist/pyrefine.exe" -NewName "pyrefine-windows.exe"
+
+      - name: Rename artifact (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mv dist/pyrefine dist/pyrefine-linux
+
+      - name: Rename artifact (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          mv dist/pyrefine dist/pyrefine-macos
+
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyrefine-${{ matrix.os }}
+          path: |
+            dist/*
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Compute checksums (Windows)
+        id: sha
+        run: |
+          WIN_EXE="artifacts/pyrefine-windows-latest/pyrefine-windows.exe"
+          if [ -f "$WIN_EXE" ]; then
+            WIN_SHA=$(sha256sum "$WIN_EXE" | awk '{print $1}')
+            echo "win_sha256=$WIN_SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "Windows artifact not found" >&2
+            exit 1
+          fi
+
+      - name: Generate manifest.json
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="$TAG"
+          if echo "$VERSION" | grep -q '^v'; then VERSION="${VERSION#v}"; fi
+          WIN_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/pyrefine-windows.exe"
+          cat > manifest.json << EOF
+          {
+            "version": "${VERSION}",
+            "artifacts": {
+              "windows": {
+                "url": "${WIN_URL}",
+                "checksum": "sha256:${{ steps.sha.outputs.win_sha256 }}"
+              }
+            }
+          }
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/*
+            manifest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
