@@ -35,7 +35,13 @@ python PyRefine/tools/pyrefine.py --setup
 
 This command now:
 
+- Generates the standard Python skeleton (`src/`, `tests/`, `configs/`, `scripts/`) plus empty `__init__.py` files when missing.
+- Drops in a starter `Dockerfile` (only if one does not already exist) that:
+  - Uses the `python:3.11-slim` base image with sensible env defaults.
+  - Installs build essentials + pip dependencies from `requirements.txt`.
+  - Exposes port `8000` and runs `python src/main.py` (customize the command to match your entry point).
 - Merges PyRefine's VS Code settings/extension recommendations.
+- Automatically installs the **Pylance** extension (if the VS Code CLI is available).
 - Creates or refreshes **both** `.venv` (pip) and `.uv-env` (UV) environments.
 - Installs dependencies from `requirements.txt` (pip) and `uv.lock` (UV, with a fallback to requirements if no lock exists).
 
