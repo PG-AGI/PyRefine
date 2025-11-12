@@ -14,6 +14,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+import setup_manager
+
 APP_VERSION = "1.0"
 # Optional default manifest URL. Override via --manifest-url or the
 # PYREFINE_UPDATE_URL environment variable.
@@ -39,74 +41,6 @@ def get_resource_root() -> Path:
 RESOURCE_ROOT = get_resource_root()
 FORMAT_SCRIPT = RESOURCE_ROOT / "tools" / "format.py"
 FLAKE8_TEMPLATE = RESOURCE_ROOT / ".flake8"
-
-PYLANCE_EXTENSION_ID = "ms-python.vscode-pylance"
-
-
-def pylance_installed() -> bool:
-    """
-    Check whether the VS Code Pylance extension is available.
-
-    First tries the VS Code CLI (`code --list-extensions`), then falls back to
-    scanning common extension directories.
-    """
-    for cmd in ("code", "code-insiders"):
-        exe = shutil.which(cmd)
-        if not exe:
-            continue
-        try:
-            result = subprocess.run(
-                [exe, "--list-extensions"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            if PYLANCE_EXTENSION_ID.lower() in result.stdout.lower():
-                return True
-            return False
-        except subprocess.CalledProcessError:
-            continue
-
-    candidates: list[Path] = []
-    home = Path.home()
-    candidates.append(home / ".vscode" / "extensions")
-    candidates.append(home / ".vscode-insiders" / "extensions")
-    user_profile = Path(os.environ.get("USERPROFILE", home))
-    candidates.append(user_profile / ".vscode" / "extensions")
-    for base in candidates:
-        if base.exists():
-            for child in base.iterdir():
-                if child.is_dir() and child.name.startswith(
-                    PYLANCE_EXTENSION_ID
-                ):
-                    return True
-    return False
-
-
-def notify_pylance_missing() -> None:
-    """
-    Emit a console notice and, on Windows, a popup encouraging Pylance install.
-    """
-    message = (
-        "The Pylance extension (ms-python.vscode-pylance) was not detected.\n"
-        "Installing it is highly recommended for richer IntelliSense, smarter autocompletion, and an improved Python development experience.\n\n"
-        "Marketplace link:\n"
-        "https://marketplace.visualstudio.com/items?itemName="
-        "ms-python.vscode-pylance"
-    )
-    print(f"NOTICE: {message}")
-    if os.name == "nt":
-        try:
-            import ctypes
-
-            ctypes.windll.user32.MessageBoxW(  # type: ignore[attr-defined]
-                None,
-                message,
-                "PyRefine Recommendation",
-                0x00000040,
-            )
-        except Exception:
-            pass
 
 
 class UpdateError(RuntimeError):
@@ -552,180 +486,6 @@ def clean_target(project_root: Path, target_arg: str) -> None:
     raise ValueError(f"Unsupported target: {target_path}")
 
 
-def build_settings_payload(project_root: Path) -> dict[str, object]:
-    command = f'python "{formatter_reference(project_root)}" "${{file}}"'
-    return {
-        "editor.formatOnSave": True,
-        "[python]": {
-            "editor.formatOnSave": True,
-            "editor.defaultFormatter": "ms-python.black-formatter",
-            "editor.codeActionsOnSave": {
-                "source.organizeImports": True,
-                "source.fixAll": True,
-            },
-        },
-        "python.languageServer": "Jedi",
-        "python.terminal.activateEnvironment": True,
-        "python.formatting.provider": "black",
-        "python.formatting.blackArgs": ["--line-length", "79"],
-        "python.sortImports.args": [
-            "--profile",
-            "black",
-            "--line-length",
-            "79",
-        ],
-        "python.linting.enabled": True,
-        "python.linting.flake8Enabled": True,
-        "python.linting.pylintEnabled": False,
-        "python.linting.mypyEnabled": False,
-        "python.linting.banditEnabled": False,
-        "python.linting.ignorePatterns": [
-            "env/**",
-            "**/__pycache__/**",
-        ],
-        "emeraldwalk.runonsave": {
-            "commands": [
-                {
-                    "match": "\\.py$",
-                    "cmd": command,
-                    "runIn": "terminal",
-                }
-            ],
-        },
-    }
-
-
-def build_extensions_payload() -> dict[str, object]:
-    return {
-        "recommendations": [
-            "ms-python.python",
-            "ms-python.black-formatter",
-            "ms-python.isort",
-            "ms-python.flake8",
-            "ms-python.vscode-pylance",
-            "emeraldwalk.runonsave",
-        ],
-        "unwantedRecommendations": ["ms-python.pylint", "charliermarsh.ruff"],
-    }
-
-
-def formatter_reference(project_root: Path) -> str:
-    try:
-        relative = FORMAT_SCRIPT.relative_to(project_root)
-        return f"${{workspaceFolder}}/{relative.as_posix()}"
-    except ValueError:
-        return FORMAT_SCRIPT.as_posix()
-
-
-def merge_dict(
-    base: dict[str, object], updates: dict[str, object]
-) -> dict[str, object]:
-    result = dict(base)
-    for key, value in updates.items():
-        if (
-            key in result
-            and isinstance(result[key], dict)
-            and isinstance(value, dict)
-        ):
-            result[key] = merge_dict(result[key], value)
-        elif (
-            key in result
-            and isinstance(result[key], list)
-            and isinstance(value, list)
-        ):
-            combined = list(result[key])
-            for item in value:
-                if item not in combined:
-                    combined.append(item)
-            result[key] = combined
-        else:
-            result[key] = value
-    return result
-
-
-def merge_run_on_save(
-    settings: dict[str, object], project_root: Path
-) -> dict[str, object]:
-    commands_obj = settings.get("emeraldwalk.runonsave")
-    if not isinstance(commands_obj, dict):
-        return settings
-    commands = commands_obj.get("commands")
-    if not isinstance(commands, list):
-        return settings
-    desired_cmd = f'python "{formatter_reference(project_root)}" "${{file}}"'
-    if any(
-        isinstance(entry, dict) and entry.get("cmd") == desired_cmd
-        for entry in commands
-    ):
-        return settings
-    commands.append(
-        {
-            "match": "\\.py$",
-            "cmd": desired_cmd,
-            "runIn": "terminal",
-        }
-    )
-    return settings
-
-
-def integrate_vscode(project_root: Path) -> None:
-    settings_dir = project_root / ".vscode"
-    settings_dir.mkdir(parents=True, exist_ok=True)
-
-    settings_path = settings_dir / "settings.json"
-    extensions_path = settings_dir / "extensions.json"
-
-    desired_settings = build_settings_payload(project_root)
-    desired_extensions = build_extensions_payload()
-
-    if settings_path.exists():
-        try:
-            existing_settings = json.loads(
-                settings_path.read_text(encoding="utf-8")
-            )
-        except json.JSONDecodeError:
-            existing_settings = {}
-        merged_settings = merge_run_on_save(
-            merge_dict(existing_settings, desired_settings),
-            project_root,
-        )
-        settings_path.write_text(
-            json.dumps(merged_settings, indent=4) + "\n", encoding="utf-8"
-        )
-        print(f"Merged settings into {settings_path}")
-    else:
-        settings_path.write_text(
-            json.dumps(desired_settings, indent=4) + "\n", encoding="utf-8"
-        )
-        print(f"Created {settings_path}")
-
-    if extensions_path.exists():
-        try:
-            existing_extensions = json.loads(
-                extensions_path.read_text(encoding="utf-8")
-            )
-        except json.JSONDecodeError:
-            existing_extensions = {}
-        merged_extensions = merge_dict(existing_extensions, desired_extensions)
-        extensions_path.write_text(
-            json.dumps(merged_extensions, indent=4) + "\n", encoding="utf-8"
-        )
-        print(f"Merged extensions into {extensions_path}")
-    else:
-        extensions_path.write_text(
-            json.dumps(desired_extensions, indent=4) + "\n", encoding="utf-8"
-        )
-        print(f"Created {extensions_path}")
-    if not pylance_installed():
-        print(
-            "NOTICE: The Pylance extension (ms-python.vscode-pylance) was not "
-            "detected. Installing it is highly recommended for richer "
-            "IntelliSense, smarter autocompletion, and an improved Python development experience:\n"
-            "https://marketplace.visualstudio.com/items?itemName="
-            "ms-python.vscode-pylance"
-        )
-
-
 def handle_create(args: argparse.Namespace) -> None:
     project_root = args.project_root.resolve()
     create_scaffold(project_root)
@@ -747,7 +507,7 @@ def handle_clean(args: argparse.Namespace) -> None:
 
 def handle_setup(args: argparse.Namespace) -> None:
     project_root = args.project_root.resolve()
-    integrate_vscode(project_root)
+    setup_manager.run_setup(project_root, RESOURCE_ROOT)
 
 
 def main() -> None:

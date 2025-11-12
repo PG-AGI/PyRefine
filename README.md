@@ -25,22 +25,34 @@ Commit the `PyRefine/` directory if you want the tooling tracked with your codeb
 
 ---
 
-## Step 3. Create and activate a virtual environment
+## Step 3. Run the automated setup (VS Code + environments)
 
-Set up an isolated interpreter so PyRefine's tools do not clash with your global site-packages:
-
-```bash
-python -m venv .venv
-# Activate it
-source .venv/bin/activate        # macOS or Linux
-.\.venv\Scripts\activate         # Windows PowerShell
-```
-
-Install the required tooling packages:
+From the project root run:
 
 ```bash
-pip install -r PyRefine/requirements.txt
+python PyRefine/tools/pyrefine.py --setup
 ```
+
+This command now:
+
+- Merges PyRefine's VS Code settings/extension recommendations.
+- Creates or refreshes **both** `.venv` (pip) and `.uv-env` (UV) environments.
+- Installs dependencies from `requirements.txt` (pip) and `uv.lock` (UV, with a fallback to requirements if no lock exists).
+
+Switch between environments whenever you like:
+
+```bash
+# Pip environment
+source .venv/bin/activate          # macOS / Linux
+.\.venv\Scripts\activate           # Windows
+
+# UV environment
+uv run python main.py              # Direct command using UV
+source .uv-env/bin/activate        # macOS / Linux manual activation
+.\.uv-env\Scripts\activate         # Windows manual activation
+```
+
+> **Tip:** Install UV once (`pip install uv` or download from https://github.com/astral-sh/uv). If the `uv` command is missing, PyRefine completes the rest of the setup and prints a reminder so you can add UV later and rerun `--setup`.
 
 ---
 
@@ -52,7 +64,7 @@ All automation now lives in one command with three flags. Run them from the proj
 | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `python PyRefine/tools/pyrefine.py --create`       | Creates the standard Python scaffold (`src/`, `tests/`, `configs/`, `scripts/` + starter files).                                                                            |
 | `python PyRefine/tools/pyrefine.py --clean [path]` | Formats a file, directory, or the entire project (`.`). Directories are tidied (caches removed) before the Autoflake -> Isort -> Autopep8 -> Black -> Flake8 pipeline runs. |
-| `python PyRefine/tools/pyrefine.py --setup`        | Creates or merges `.vscode/settings.json` and `.vscode/extensions.json` so VS Code runs PyRefine's formatting on save.                                                      |
+| `python PyRefine/tools/pyrefine.py --setup`        | Creates/merges VS Code workspace files **and** provisions `.venv` + `.uv-env` with the dependencies from `requirements.txt` / `uv.lock`.                                     |
 Running `pyrefine.exe` with no flags defaults to `--clean .`, so the entire repository is tidied and formatted automatically.
 If Pylance is missing from your VS Code extensions, the CLI shows a reminder (and on Windows a popup) recommending installation for better IntelliSense and autocompletion.
 
@@ -95,6 +107,7 @@ Use `--project-root /absolute/path` with any command to target a different repos
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `tools/pyrefine.py`        | Command-line utility providing --create, --clean, and --setup actions for project scaffolding, formatting, and VS Code integration. |
 | `tools/bootstrap.py`       | Legacy guided script that still supports scaffold generation and bulk formatting.                                                   |
+| `tools/setup_manager.py`   | Shared helper used by `--setup` to configure VS Code and provision pip/UV environments.                                             |
 | `tools/setup_workspace.py` | Writes or merges `.vscode/settings.json` and `.vscode/extensions.json` for a given project root.                                    |
 | `tools/format.py`          | Runs the Autoflake -> Isort -> Autopep8 -> Black -> Flake8 pipeline. Used by the CLI and by VS Code on save.                        |
 | `.flake8`                  | Shared lint configuration (79 character lines, cache directories ignored).                                                          |
