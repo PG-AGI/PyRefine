@@ -3,3 +3,5 @@ isort
 flake8
 autopep8
 autoflake
+pytest
+coverage

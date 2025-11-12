@@ -14,6 +14,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+import coverage_runner
 import setup_manager
 
 APP_VERSION = "1.0"
@@ -23,6 +24,7 @@ DEFAULT_MANIFEST_URL = "https://raw.githubusercontent.com/PG-AGI/PyRefine/pyrefi
 DOWNLOAD_BUFFER_SIZE = 64 * 1024
 CHECKSUM_ALGORITHM = "sha256"
 WINDOWS = os.name == "nt"
+TEST_COVERAGE_ALL = "__PYREFINE_TEST_COVERAGE_ALL__"
 
 
 def get_resource_root() -> Path:
@@ -352,6 +354,16 @@ def parse_args() -> argparse.Namespace:
         help="Create or merge .vscode settings and extension recommendations.",
     )
     parser.add_argument(
+        "--test-coverage",
+        nargs="?",
+        const=TEST_COVERAGE_ALL,
+        metavar="PROJECT_PATH",
+        help=(
+            "Run pytest/coverage for a project. Without a path, runs against "
+            "every project discovered under --project-root."
+        ),
+    )
+    parser.add_argument(
         "--update",
         action="store_true",
         help=(
@@ -373,13 +385,14 @@ def parse_args() -> argparse.Namespace:
             1 if args.create else 0,
             1 if args.clean is not None else 0,
             1 if args.setup else 0,
+            1 if args.test_coverage is not None else 0,
             1 if args.update else 0,
         ]
     )
     if actions > 1:
         parser.error(
             "Please choose only one action at a time "
-            "(--create, --clean, --setup, or --update)."
+            "(--create, --clean, --setup, --test-coverage, or --update)."
         )
     if args.update:
         return args  # no default action when explicitly updating
@@ -510,6 +523,49 @@ def handle_setup(args: argparse.Namespace) -> None:
     setup_manager.run_setup(project_root, RESOURCE_ROOT)
 
 
+def handle_test_coverage(args: argparse.Namespace) -> None:
+    root = args.project_root.resolve()
+    target = args.test_coverage
+    if target == TEST_COVERAGE_ALL:
+        projects = coverage_runner.discover_projects(root)
+        if not projects:
+            print(
+                "[pyrefine] No Python projects found under "
+                f"{root}. Specify a path with --test-coverage <project>.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    else:
+        project_path = ensure_absolute(Path(target), root)
+        if not project_path.exists():
+            print(
+                f"[pyrefine] Target '{project_path}' does not exist.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if not project_path.is_dir():
+            print(
+                f"[pyrefine] '{project_path}' is not a directory.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        projects = [project_path]
+
+    try:
+        coverage_runner.run_for_projects(projects)
+    except coverage_runner.CoverageError as exc:
+        print(f"[pyrefine] {exc}", file=sys.stderr)
+        sys.exit(1)
+    except subprocess.CalledProcessError as exc:
+        print(
+            "[pyrefine] Coverage command failed "
+            f"(exit code {
+                exc.returncode}).",
+            file=sys.stderr,
+        )
+        sys.exit(exc.returncode)
+
+
 def main() -> None:
     args = parse_args()
     if args.create:
@@ -518,6 +574,8 @@ def main() -> None:
         handle_clean(args)
     elif args.setup:
         handle_setup(args)
+    elif args.test_coverage is not None:
+        handle_test_coverage(args)
     elif args.update:
         handle_update(args)
     else:
