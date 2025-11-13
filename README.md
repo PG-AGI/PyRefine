@@ -33,14 +33,19 @@ PyRefine bundles every repetitive task you need when adopting or creating a Pyth
 
 ## Running PyRefine per Platform
 
-| Platform / Environment | Command                                                                                                        |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Windows (pip/PowerShell) | `python PyRefine/tools/pyrefine.py --setup` (or any other flag)                                               |
-| Windows (standalone exe) | `pyrefine.exe --setup`  \|  `pyrefine.exe --clean .`  \|  `pyrefine.exe --test-coverage`                      |
-| macOS (Python)           | `python3 PyRefine/tools/pyrefine.py --setup`                                                                  |
-| macOS (binary)           | `chmod +x pyrefine-macos && ./pyrefine-macos --setup` (or `--clean .`, `--test-coverage`)                     |
-| Ubuntu / Linux (Python)  | `python3 PyRefine/tools/pyrefine.py --setup`                                                                  |
-| Ubuntu / Linux (binary)  | `chmod +x pyrefine-linux && ./pyrefine-linux --setup` (or other flags)                                        |
+**Windows**
+- Python: `python PyRefine/tools/pyrefine.py --setup`
+- EXE: `pyrefine.exe --setup` (use `--clean .`, `--test-coverage`, etc. the same way)
+
+**macOS**
+- Python: `python3 PyRefine/tools/pyrefine.py --setup`
+- Binary: `chmod +x pyrefine-macos && ./pyrefine-macos --setup`
+
+**Ubuntu / Linux**
+- Python: `python3 PyRefine/tools/pyrefine.py --setup`
+- Binary: `chmod +x pyrefine-linux && ./pyrefine-linux --setup`
+
+Use the same flag set (`--clean`, `--create`, `--test-coverage`, `--project-root /path`) regardless of platform or binary/Python mode.
 
 Use `--project-root /absolute/path` with any command when invoking PyRefine from outside the project.
 
