@@ -200,8 +200,6 @@ def ensure_scaffold(project_root: Path, resource_root: Path) -> None:
         created_extra.append("requirements.txt")
     if _write_file_if_missing(project_root, "Dockerfile", DOCKERFILE_TEMPLATE):
         created_extra.append("Dockerfile")
-    if _write_file_if_missing(project_root, "uv.lock", "", create_empty=True):
-        created_extra.append("uv.lock")
     if ensure_flake8(project_root, resource_root):
         created_extra.append(".flake8")
     if created_dirs:
@@ -265,4 +263,3 @@ def _write_file_if_missing(
     else:
         target.write_text(contents, encoding="utf-8")
     return True
-

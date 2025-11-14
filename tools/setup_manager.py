@@ -15,6 +15,22 @@ PIP_ENV_DIRNAME = ".venv"
 UV_ENV_DIRNAME = ".uv-env"
 
 
+def _get_base_python() -> str:
+    """Get the actual Python interpreter, even when running as a frozen executable."""
+    if getattr(sys, "frozen", False):
+        # Running as PyInstaller executable - find system Python
+        python_exe = shutil.which("python") or shutil.which("python3")
+        if not python_exe:
+            raise RuntimeError(
+                "Cannot find Python interpreter. Please ensure Python is installed "
+                "and available in your PATH."
+            )
+        return python_exe
+    else:
+        # Running as normal Python script
+        return sys.executable
+
+
 def _env_python(env_dir: Path) -> Path:
     script_dir = "Scripts" if os.name == "nt" else "bin"
     executable = "python.exe" if os.name == "nt" else "python"
@@ -107,9 +123,9 @@ def create_pip_environment(project_root: Path) -> None:
     env_dir = project_root / PIP_ENV_DIRNAME
     if not env_dir.exists():
         print(f"[setup] Creating pip environment at {env_dir}")
-        subprocess.run(
-            [sys.executable, "-m", "venv", str(env_dir)], check=True
-        )
+        # Use the base Python interpreter, not the frozen executable
+        base_python = _get_base_python()
+        subprocess.run([base_python, "-m", "venv", str(env_dir)], check=True)
     else:
         print(f"[setup] Reusing existing pip environment at {env_dir}")
 
@@ -119,7 +135,9 @@ def create_pip_environment(project_root: Path) -> None:
     requirements = project_root / "requirements.txt"
     if requirements.exists():
         print(f"[setup] Installing pip dependencies from {requirements}")
-        subprocess.run(pip_cmd + ["install", "-r", str(requirements)], check=True)
+        subprocess.run(
+            pip_cmd + ["install", "-r", str(requirements)], check=True
+        )
     else:
         print("[setup] requirements.txt not found; skipping pip installs.")
 
@@ -138,19 +156,10 @@ def create_uv_environment(project_root: Path) -> None:
         print(f"[setup] Reusing existing UV environment at {env_dir}")
 
     env_python = _env_python(env_dir)
-    uv_lock = project_root / "uv.lock"
     requirements = project_root / "requirements.txt"
 
-    if uv_lock.exists():
-        print(f"[setup] Syncing UV environment from {uv_lock}")
-        subprocess.run(
-            [uv_exec, "pip", "sync", "--python", str(env_python), str(uv_lock)],
-            check=True,
-        )
-    elif requirements.exists():
-        print(
-            "[setup] uv.lock not found; installing requirements.txt via UV."
-        )
+    if requirements.exists():
+        print(f"[setup] Installing dependencies from {requirements}")
         subprocess.run(
             [
                 uv_exec,
@@ -165,8 +174,7 @@ def create_uv_environment(project_root: Path) -> None:
         )
     else:
         print(
-            "[setup] No uv.lock or requirements.txt; skipping UV dependency "
-            "installation."
+            "[setup] No requirements.txt found; skipping dependency installation."
         )
 
 
@@ -180,4 +188,3 @@ def run_setup(project_root: Path, resource_root: Path) -> None:
         "[setup] Completed scaffolding, VS Code configuration, and pip/UV "
         "environment setup."
     )
-
