@@ -15,6 +15,7 @@ import urllib.request
 from pathlib import Path
 
 import coverage_runner
+import scaffold_manager
 import setup_manager
 
 APP_VERSION = "1.0"
@@ -42,7 +43,6 @@ def get_resource_root() -> Path:
 
 RESOURCE_ROOT = get_resource_root()
 FORMAT_SCRIPT = RESOURCE_ROOT / "tools" / "format.py"
-FLAKE8_TEMPLATE = RESOURCE_ROOT / ".flake8"
 
 
 class UpdateError(RuntimeError):
@@ -285,14 +285,6 @@ def handle_update(args: argparse.Namespace) -> None:
 
 
 # Directories we treat as part of the canonical scaffold
-TEMPLATE_DIRECTORIES: tuple[str, ...] = ("src", "tests", "configs", "scripts")
-TEMPLATE_FILES: tuple[tuple[str, str], ...] = (
-    ("src/__init__.py", ""),
-    ("tests/__init__.py", ""),
-    ("configs/.gitkeep", ""),
-    ("scripts/.gitkeep", ""),
-)
-
 # Items to prune when cleaning a repository or folder
 CLUTTER_DIR_PATTERNS: tuple[str, ...] = (
     "__pycache__",
@@ -409,22 +401,11 @@ def ensure_absolute(path: Path, root: Path) -> Path:
 
 def ensure_flake8_config(project_root: Path) -> None:
     """Ensure the project has a .flake8 configuration file."""
-    if not FLAKE8_TEMPLATE.exists():
-        return
-    target = project_root / ".flake8"
-    if not target.exists():
-        shutil.copy2(FLAKE8_TEMPLATE, target)
+    scaffold_manager.ensure_flake8(project_root, RESOURCE_ROOT)
 
 
 def create_scaffold(project_root: Path) -> None:
-    for directory in TEMPLATE_DIRECTORIES:
-        (project_root / directory).mkdir(parents=True, exist_ok=True)
-    for relative_path, contents in TEMPLATE_FILES:
-        file_path = project_root / relative_path
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        if not file_path.exists():
-            file_path.write_text(contents, encoding="utf-8")
-    ensure_flake8_config(project_root)
+    scaffold_manager.ensure_scaffold(project_root, RESOURCE_ROOT)
     print(f"Created scaffold under {project_root}")
 
 

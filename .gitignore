@@ -21,6 +21,7 @@ manifests/
 .env
 .uv-env/
 pyrefine_artifacts/
+unit_tests/
 
 # Distribution / packaging
 .Python

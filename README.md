@@ -6,7 +6,7 @@ PyRefine bundles every repetitive task you need when adopting or creating a Pyth
 
 ## Feature Highlights
 
-- **Standard project scaffold**: ensures `src/`, `tests/`, `configs/`, `scripts/`, `__init__.py` files, and a curated `.flake8`.
+- **Standard project scaffold**: ensures `src/`, `tests/`, `configs/`, `scripts/`, `utils/`, `services/`, ready-to-run FastAPI `src/main.py`, starter tests, `.env.example`, `.gitignore`, `requirements.txt`, `.flake8`, and a README template.
 - **Docker-ready**: auto-generates a `Dockerfile` (python:3.11-slim base, pip installs, port exposure, configurable entrypoint) when missing.
 - **VS Code integration**: merges `.vscode/settings.json` and `.vscode/extensions.json`, adds run-on-save formatting, and auto-installs Pylance via the VS Code CLI.
 - **Dual environments**: provisions `.venv` (pip) and `.uv-env` (UV) with dependencies from `requirements.txt` and `uv.lock`.
@@ -55,7 +55,7 @@ Use `--project-root /absolute/path` with any command when invoking PyRefine from
 
 | Command | Purpose |
 | ------- | ------- |
-| `--create` | Generate the standard scaffold (folders, `__init__.py`, `.flake8`). |
+| `--create` | Generate the full backend template (folders, FastAPI app, starter tests, `.env.example`, `.gitignore`, `requirements.txt`, Dockerfile, `.flake8`). |
 | `--clean [PATH]` | Format the entire project (`.` default), a folder, or a single `.py` file with the full formatter pipeline. |
 | `--setup` | Runs the consolidated setup manager: scaffold/Dockerfile, VS Code config, Pylance install, `.venv` + `.uv-env` provisioning, dependency installs. |
 | `--test-coverage [PATH]` | Run pytest+coverage either for the provided project path or every project under the root. Reports land in `pyrefine_artifacts/<project>/coverage/`. |
@@ -95,9 +95,12 @@ Use `--project-root /absolute/path` with any command when invoking PyRefine from
   RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
   COPY . .
   EXPOSE ${PORT}
-  CMD ["python", "src/main.py"]  # customize as needed
+  CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "${PORT}"]
   ```
-- Scaffold ensures the canonical layout (`src/`, `tests/`, `configs/`, `scripts/`, `.flake8`, `.vscode/`).
+- `--create` ensures the canonical layout plus production defaults:
+  - Directories: `src/`, `tests/`, `configs/`, `scripts/`, `utils/`, `services/`.
+  - Files: FastAPI app (`src/main.py`), starter tests, config/settings, example utils/services, `.env.example`, `.gitignore`, `.flake8`, `requirements.txt`, README template, empty `uv.lock`.
+- Customize the entry point, ports, or dependencies as your service evolves.
 - Customize the entry point, ports, or dependencies as your service evolves.
 
 ---

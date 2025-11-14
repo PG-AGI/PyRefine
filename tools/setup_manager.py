@@ -9,16 +9,10 @@ import sys
 from pathlib import Path
 
 import common_vscode as cv
+import scaffold_manager
 
 PIP_ENV_DIRNAME = ".venv"
 UV_ENV_DIRNAME = ".uv-env"
-PROJECT_STRUCTURE = (
-    "src",
-    "tests",
-    "configs",
-    "scripts",
-)
-DOCKERFILE_NAME = "Dockerfile"
 
 
 def _env_python(env_dir: Path) -> Path:
@@ -178,66 +172,12 @@ def create_uv_environment(project_root: Path) -> None:
 
 def run_setup(project_root: Path, resource_root: Path) -> None:
     format_script = resource_root / "tools" / "format.py"
-    create_project_structure(project_root)
-    ensure_dockerfile(project_root)
+    scaffold_manager.ensure_scaffold(project_root, resource_root)
     configure_vscode(project_root, format_script)
     create_pip_environment(project_root)
     create_uv_environment(project_root)
     print(
-        "[setup] Completed VS Code configuration and pip/UV environment setup."
+        "[setup] Completed scaffolding, VS Code configuration, and pip/UV "
+        "environment setup."
     )
-
-
-def create_project_structure(project_root: Path) -> None:
-    created_any = False
-    for folder in PROJECT_STRUCTURE:
-        path = project_root / folder
-        if not path.exists():
-            path.mkdir(parents=True, exist_ok=True)
-            created_any = True
-    init_file = project_root / "src" / "__init__.py"
-    if not init_file.exists():
-        init_file.parent.mkdir(parents=True, exist_ok=True)
-        init_file.write_text("", encoding="utf-8")
-        created_any = True
-    tests_init = project_root / "tests" / "__init__.py"
-    if not tests_init.exists():
-        tests_init.parent.mkdir(parents=True, exist_ok=True)
-        tests_init.write_text("", encoding="utf-8")
-        created_any = True
-    if created_any:
-        print("[setup] Ensured standard project structure (src/, tests/, etc.).")
-
-
-def ensure_dockerfile(project_root: Path) -> None:
-    dockerfile_path = project_root / DOCKERFILE_NAME
-    if dockerfile_path.exists():
-        print(f"[setup] Dockerfile already present at {dockerfile_path}")
-        return
-    content = """# syntax=docker/dockerfile:1
-FROM python:3.11-slim
-
-WORKDIR /app
-
-ENV PYTHONDONTWRITEBYTECODE=1 \\
-    PYTHONUNBUFFERED=1 \\
-    PORT=8000
-
-RUN apt-get update \\
-    && apt-get install -y --no-install-recommends build-essential \\
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --upgrade pip \\
-    && pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-EXPOSE ${PORT}
-
-# Adjust the command to match your application's entry point.
-CMD ["python", "src/main.py"]
-"""
-    dockerfile_path.write_text(content, encoding="utf-8")
-    print(f"[setup] Created basic Dockerfile at {dockerfile_path}")
 
