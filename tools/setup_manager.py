@@ -9,7 +9,6 @@ import sys
 from pathlib import Path
 
 import common_vscode as cv
-import scaffold_manager
 
 PIP_ENV_DIRNAME = ".venv"
 UV_ENV_DIRNAME = ".uv-env"
@@ -180,11 +179,7 @@ def create_uv_environment(project_root: Path) -> None:
 
 def run_setup(project_root: Path, resource_root: Path) -> None:
     format_script = resource_root / "tools" / "format.py"
-    scaffold_manager.ensure_scaffold(project_root, resource_root)
     configure_vscode(project_root, format_script)
     create_pip_environment(project_root)
     create_uv_environment(project_root)
-    print(
-        "[setup] Completed scaffolding, VS Code configuration, and pip/UV "
-        "environment setup."
-    )
+    print("[setup] Completed VS Code configuration and pip/UV environment setup.")
