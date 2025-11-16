@@ -34,6 +34,21 @@ class CoverageError(RuntimeError):
     """Raised when coverage execution cannot proceed."""
 
 
+def _python_executable() -> str:
+    """
+    Coverage needs a real Python interpreter; the packaged exe cannot run modules.
+    """
+    if getattr(sys, "frozen", False):
+        for candidate in ("python.exe", "python", "python3"):
+            resolved = shutil.which(candidate)
+            if resolved:
+                return resolved
+        raise CoverageError(
+            "Cannot locate a system Python interpreter for coverage runs."
+        )
+    return sys.executable
+
+
 def looks_like_project(path: Path) -> bool:
     for marker in PROJECT_MARKERS:
         candidate = path / marker
@@ -67,7 +82,7 @@ def run_pytest_with_coverage(project_dir: Path) -> Path:
     shutil.rmtree(coverage_dir, ignore_errors=True)
     coverage_dir.mkdir(parents=True, exist_ok=True)
 
-    python_exec = sys.executable
+    python_exec = _python_executable()
     env = os.environ.copy()
     run_cmd = [python_exec, "-m", "coverage", "run", "-m", "pytest"]
     subprocess.run(run_cmd, cwd=project_dir, check=True, env=env)

@@ -12,6 +12,13 @@ from typing import Iterable, Sequence, Tuple
 PYREFINE_ROOT = Path(__file__).resolve().parents[1]
 PYREFINE_DIRNAME = PYREFINE_ROOT.name
 
+def _load_dynamic_ignore_names() -> set[str]:
+    raw = os.environ.get("PYREFINE_IGNORE_DIRS", "")
+    if not raw:
+        return set()
+    return {entry.strip() for entry in raw.split(",") if entry.strip()}
+
+DYNAMIC_IGNORE_NAMES: set[str] = _load_dynamic_ignore_names()
 
 def determine_project_root() -> Path:
     env_root = os.environ.get("PYREFINE_PROJECT_ROOT")
@@ -85,9 +92,9 @@ def partition_paths(paths: Iterable[Path]) -> Tuple[list[Path], list[Path]]:
 
 def gather_all_targets() -> list[Path]:
     candidates: list[Path] = []
-
+    ignored = IGNORED_DIR_NAMES | DYNAMIC_IGNORE_NAMES
     for child in PROJECT_ROOT.iterdir():
-        if child.name in IGNORED_DIR_NAMES:
+        if child.name in ignored:
             continue
         if child.is_dir() or (child.is_file() and child.suffix == ".py"):
             candidates.append(child)
@@ -97,6 +104,8 @@ def gather_all_targets() -> list[Path]:
 
 def gather_targets(target: Path) -> list[Path]:
     if target.is_dir():
+        if target.name in DYNAMIC_IGNORE_NAMES:
+            return []
         return [target]
     if target.is_file() and target.suffix == ".py":
         return [target]
