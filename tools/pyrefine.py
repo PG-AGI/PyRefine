@@ -22,6 +22,15 @@ DEFAULT_MANIFEST_URL = os.environ.get(
 TEST_COVERAGE_ALL = "__PYREFINE_TEST_COVERAGE_ALL__"
 
 
+def _execution_project_root(project_root: Path) -> Path:
+    """
+    When frozen as pyrefine.exe, treat the executable's directory as the project root.
+    """
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return project_root.resolve()
+
+
 def get_resource_root() -> Path:
     bundle_dir = getattr(sys, "_MEIPASS", None)
     if bundle_dir:
@@ -141,37 +150,33 @@ def handle_setup(args: argparse.Namespace) -> None:
 
 
 def handle_test_coverage(args: argparse.Namespace) -> None:
-    root = args.project_root.resolve()
+    root = _execution_project_root(args.project_root)
     try:
         gitignore_spec = load_gitignore_spec(root)
     except GitignoreError as exc:
         print(f"[pyrefine] {exc}", file=sys.stderr)
         sys.exit(1)
-    target = args.test_coverage
-    if target == TEST_COVERAGE_ALL:
-        projects = coverage_runner.discover_projects(root, gitignore_spec)
-        if not projects:
-            print(
-                "[pyrefine] No Python projects found under "
-                f"{root}. Specify a path with --test-coverage <project>.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
+
+    target_arg = args.test_coverage
+    if target_arg is None or target_arg == TEST_COVERAGE_ALL:
+        project_path = root
     else:
-        project_path = clean_manager.ensure_absolute(Path(target), root)
-        if not project_path.exists():
-            print(f"[pyrefine] Target '{project_path}' does not exist.", file=sys.stderr)
-            sys.exit(1)
-        if not project_path.is_dir():
-            print(f"[pyrefine] '{project_path}' is not a directory.", file=sys.stderr)
-            sys.exit(1)
-        if is_gitignored(project_path, root, gitignore_spec):
-            print(
-                f"[pyrefine] '{project_path}' is ignored via .gitignore; skipping.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-        projects = [project_path]
+        project_path = clean_manager.ensure_absolute(Path(target_arg), root)
+
+    if not project_path.exists():
+        print(f"[pyrefine] Target '{project_path}' does not exist.", file=sys.stderr)
+        sys.exit(1)
+    if not project_path.is_dir():
+        print(f"[pyrefine] '{project_path}' is not a directory.", file=sys.stderr)
+        sys.exit(1)
+    if is_gitignored(project_path, root, gitignore_spec):
+        print(
+            f"[pyrefine] '{project_path}' is ignored via .gitignore; skipping.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    projects = [project_path]
 
     try:
         coverage_runner.run_for_projects(projects)
