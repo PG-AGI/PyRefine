@@ -1,179 +1,32 @@
-# PyRefine – Python Project Automation Toolkit
+# PyRefine
 
-PyRefine bundles every repetitive task you need when adopting or creating a Python codebase—scaffolding, formatting, VS Code setup, environment creation (pip + UV), coverage, Docker, and a self-updating CLI/EXE.
+## 1. What is this project?
 
----
+PyRefine is a lightweight toolkit that keeps Python repositories tidy. It can scaffold a clean layout, format code, set up editor + virtual environments, run coverage, and update itself—helping teams onboard quickly without manual cleanup.
 
-## Feature Highlights
+## 2. How to use this project (Mac, Windows, Ubuntu)
 
-- **Standard project scaffold** (`--create`): generates `src/`, `tests`, `configs`, `scripts`, `utils`, `services`, a FastAPI app, starter tests, `.env.example`, `.gitignore`, `requirements.txt`, `.flake8`, and a README template.
-- **Docker-ready**: auto-generates a `Dockerfile` (python:3.11-slim base, pip installs, port exposure, configurable entrypoint) when missing.
-- **VS Code integration**: merges `.vscode/settings.json` and `.vscode/extensions.json`, adds run-on-save formatting, and auto-installs Pylance via the VS Code CLI.
-- **Dual environments**: provisions `.venv` (pip) and `.uv-env` (UV) with dependencies from `requirements.txt` (you can add a `uv.lock` later if you want pinning).
-- **Formatting pipeline**: `--clean` runs Autoflake → Isort → Autopep8 → Black → Flake8 and prunes cache folders.
-- **Coverage automation**: `--test-coverage` executes pytest with coverage, storing reports per project under `pyrefine_artifacts/<project>/coverage/`.
-- **Self-updating binary**: `pyrefine.exe --update` downloads new releases via the manifest system.
-- **Cross-platform support**: works on Windows (exe or Python), macOS, and Ubuntu with identical commands.
-
----
-
-## Quick Start (Existing Project)
-
-1. **Clone or add PyRefine** to your project root:
-   ```bash
-   git clone https://github.com/PG-AGI/PyRefine.git
-   ```
-2. **Bootstrap the project** (see OS instructions below):
-   - `--create` (optional) to generate the full backend scaffold/Dockerfile if this is a brand-new repository.
-   - `--setup` to merge VS Code settings (auto-install Pylance) and provision `.venv` + `.uv-env` with dependencies.
-3. **Use the CLI** (`--clean`, `--create`, `--test-coverage`, etc.) to keep the project sanitized.
-
----
-
-## Running PyRefine per Platform
-
-**Windows**
-- Python: `python PyRefine/cli/pyrefine.py --setup`
-- EXE: `pyrefine.exe --setup` (use `--clean .`, `--test-coverage`, etc. the same way)
-
-**macOS**
-- Python: `python3 PyRefine/cli/pyrefine.py --setup`
-- Binary: `chmod +x pyrefine-macos && ./pyrefine-macos --setup`
-
-**Ubuntu / Linux**
-- Python: `python3 PyRefine/cli/pyrefine.py --setup`
-- Binary: `chmod +x pyrefine-linux && ./pyrefine-linux --setup`
-
-Use the same flag set (`--clean`, `--create`, `--test-coverage`, `--project-root /path`) regardless of platform or binary/Python mode.
-
-Use `--project-root /absolute/path` with any command when invoking PyRefine from outside the project.
-
----
-
-## CLI Commands
-
-| Command | Purpose |
-| ------- | ------- |
-| `--create` | Generate the full backend template (folders, FastAPI app, starter tests, `.env.example`, `.gitignore`, `requirements.txt`, Dockerfile, `.flake8`). |
-| `--clean [PATH]` | Format the entire project (`.` default), a folder, or a single `.py` file with the full formatter pipeline. |
-| `--setup` | Configures VS Code (settings/extensions, auto-installs Pylance) and provisions `.venv` + `.uv-env` with dependencies. |
-| `--test-coverage [PATH]` | Run pytest+coverage either for the provided project path or every project under the root. Reports land in `pyrefine_artifacts/<project>/coverage/`. |
-| `--update [--manifest-url URL]` | For `pyrefine.exe` users, download and apply the newest release via the manifest. |
-
-*No flag* defaults to `--clean .`, ensuring the repo stays formatted.
-
----
-
-## Environment Details
-
-- **pip (`.venv`)**: Created with `python -m venv .venv`. PyRefine auto-upgrades pip and installs `requirements.txt`.
-- **UV (`.uv-env`)**: Created with `uv venv .uv-env`. Dependencies install directly from `requirements.txt` (if you later add a real `uv.lock`, `uv pip sync uv.lock` will be used automatically). Install UV once (`pip install uv`) so PyRefine can use it automatically.
-- **Future pinning (optional)**: When you’re ready to lock versions for UV, run `uv pip compile -o uv.lock requirements.txt` (or `uv lock`) inside your project and rerun `pyrefine --setup` to have the lock applied.
-- **Switching**:
+- **macOS**
   ```bash
-  # Pip
-  source .venv/bin/activate          # macOS/Linux
-  .\.venv\Scripts\activate           # Windows
-
-  # UV
-  uv run python src/main.py          # Preferred (no activation)
-  source .uv-env/bin/activate        # Manual activation (macOS/Linux)
-  .\.uv-env\Scripts\activate         # Windows
+  chmod +x pyrefine-macos
+  ./pyrefine-macos --setup      # other commands work with the same binary
   ```
-
----
-
-## Docker & Scaffold
-
-- PyRefine drops a default `Dockerfile` when missing:
-  ```dockerfile
-  FROM python:3.11-slim
-  WORKDIR /app
-  ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8000
-  RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
-  COPY requirements.txt .
-  RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
-  COPY . .
-  EXPOSE ${PORT}
-  CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "${PORT}"]
+- **Ubuntu**
+  ```bash
+  chmod +x pyrefine-linux
+  ./pyrefine-linux --setup
   ```
-- `--create` ensures the canonical layout plus production defaults:
-  - Directories: `src/`, `tests/`, `configs/`, `scripts/`, `utils/`, `services/`.
-  - Files: FastAPI app (`src/main.py`), starter tests, config/settings, example utils/services, `.env.example`, `.gitignore`, `.flake8`, `requirements.txt`, README template.
-- Customize the entry point, ports, or dependencies as your service evolves.
+- **Windows**
+  ```powershell
+  pyrefine.exe --setup
+  ```
+- Add `--project-root C:\path\to\project` (or `/path/to/project`) if the binary isn’t placed directly in the repo root.
 
----
+**Commands**
 
-## PyTest Coverage Workflow
-
-1. Run coverage for all projects under the root:
-   ```bash
-   python PyRefine/cli/pyrefine.py --test-coverage
-   ```
-2. Or target a specific project:
-   ```bash
-   python PyRefine/cli/pyrefine.py --test-coverage path/to/project_B
-   ```
-3. Output structure:
-   ```
-   pyrefine_artifacts/
-     project_A/
-       coverage/
-         coverage.xml
-         summary.txt
-         coverage_html_report/
-         .coverage
-   ```
-4. Open `coverage_html_report/index.html` in a browser to see per-line details, or parse `coverage.xml` for CI dashboards.
-
----
-
-## VS Code & Pylance Notes
-
-- `.vscode/settings.json` sets format-on-save, Black, isort, Flake8, and run-on-save commands that call PyRefine’s formatter.
-- `.vscode/extensions.json` recommends the Python, Black, isort, Flake8, Run On Save extensions, and now also ensures Pylance is installed automatically (falls back to a reminder if VS Code CLI is unavailable).
-- Removing `.vscode/` is safe—rerun `--setup` to recreate it.
-
----
-
-## Building the Standalone Executable (Optional)
-
-```bash
-pip install pyinstaller
-python PyRefine/commands/build/build_exe.py
-```
-
-Artifacts land in `dist/`:
-- `pyrefine-windows.exe`
-- `pyrefine-linux`
-- `pyrefine-macos`
-
-CI builds (see `.github/workflows/build-binaries.yml`) rename and attach these per OS and publish a `manifest.json` for auto-update.
-
----
-
-## Repository Reference
-
-| File / Folder | Description |
-| ------------- | ----------- |
-| `cli/pyrefine.py` | Main CLI entrypoint. |
-| `commands/create/scaffold_manager.py` | Generates the backend template used by `--create`. |
-| `commands/setup/setup_manager.py` | Implements `--setup` (VS Code config, Pylance install, pip/UV environments). |
-| `commands/test_coverage/coverage_runner.py` | Discovers projects and runs pytest+coverage. |
-| `commands/clean/clean_manager.py` / `commands/clean/format.py` | Cleaning orchestration plus the formatter pipeline. |
-| `commands/update/update_manager.py` | Manifest-driven auto-updater for packaged binaries. |
-| `commands/build/build_exe.py` | PyInstaller helper for producing platform binaries. |
-| `.flake8`, `.vscode/` | Shared lint/IDE defaults. |
-| `pyrefine_artifacts/` | Generated coverage and future analysis outputs (ignored by Git). |
-| `requirements.txt` (and optional `uv.lock`) | Pip manifest generated by PyRefine. Add a `uv.lock` later if you want UV pinning. |
-
----
-
-## Next Steps
-
-- Commit the generated `.vscode/`, `Dockerfile`, and scaffolding so teammates inherit the standardized setup.
-- Add CI jobs to run `python PyRefine/cli/pyrefine.py --clean . --project-root ... --lint-only` or `--test-coverage` to enforce quality gates.
-- Customize the Dockerfile entrypoint / exposed ports to match your API (FastAPI, Flask, etc.).
-- Publish releases using the provided GitHub Actions workflow and let users update via `pyrefine.exe --update`.
-
-Run PyRefine whenever you onboard a repository to keep your Python projects clean, reproducible, and deployment-ready.
+- `pyrefine.exe` – defaults to `--clean .`, removing caches and formatting the current repo.
+- `pyrefine --clean <path>` – formats the given file/folder/project using Autoflake → Isort → Autopep8 → Black → Flake8.
+- `pyrefine --create` – generates the standard structure (src/tests/configs/scripts/utils/services, FastAPI app, Dockerfile, README, etc.).
+- `pyrefine --setup` – writes VS Code settings, installs recommended extensions, and provisions `.venv` plus `.uv-env`.
+- `pyrefine --test-coverage [path]` – runs pytest with coverage for the current project or a specified directory, saving reports under `pyrefine_artifacts/<project>/coverage`.
+- `pyrefine --update [--manifest-url URL]` – downloads and applies the latest packaged release (Windows exe replaces itself automatically).
