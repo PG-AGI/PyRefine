@@ -1,4 +1,31 @@
 #!/usr/bin/env python3
+
+
+"""
+PyRefine Bootstrap & Project Manager Script
+
+This script initializes, configures, or cleans a Python project based on the
+PyRefine template. It supports two major modes:
+
+1. **create** – Generates a full project structure (src/, tests/, configs/, scripts/),
+   sets up VS Code workspace settings, installs recommended extensions, installs
+   dependencies, and optionally formats the entire project.
+
+2. **clean** – Cleans and formats an existing repository while preserving
+   the project's overall structure and environment.
+
+Core responsibilities of this script:
+- Manage VS Code settings & extension recommendations
+- Ensure required project folder structure exists
+- Install dependencies from requirements.txt
+- Provide interactive and automated formatting using format.py
+- Allow non-interactive use via CLI flags (e.g., --mode, --yes, --skip-format)
+- Operate relative to a detected or user-chosen project root
+
+Use this file to standardize Python project setup, cleanup, and developer tooling.
+"""
+
+
 from __future__ import annotations
 
 import argparse
@@ -40,9 +67,7 @@ STRUCTURE_FILES: Sequence[tuple[str, str]] = (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Bootstrap or clean a Python project using the PyRefine template."
-        )
+        description=("Bootstrap or clean a Python project using the PyRefine template.")
     )
     parser.add_argument(
         "--mode",
@@ -269,8 +294,7 @@ def ensure_workspace_settings(
 
     if settings_path.exists():
         overwrite_settings = ask_yes_no(
-            f"{settings_path} already exists. "
-            "Overwrite with PyRefine defaults?",
+            f"{settings_path} already exists. " "Overwrite with PyRefine defaults?",
             assume_default,
             default=False,
         )
@@ -282,8 +306,7 @@ def ensure_workspace_settings(
 
     if extensions_path.exists():
         overwrite_extensions = ask_yes_no(
-            f"{extensions_path} already exists. "
-            "Overwrite with PyRefine defaults?",
+            f"{extensions_path} already exists. " "Overwrite with PyRefine defaults?",
             assume_default,
             default=False,
         )
@@ -414,8 +437,7 @@ def main() -> None:
                 format_entire_project(project_root)
             except subprocess.CalledProcessError as error:
                 print(
-                    "[bootstrap] Formatting failed "
-                    f"(exit code {error.returncode}).",
+                    "[bootstrap] Formatting failed " f"(exit code {error.returncode}).",
                     file=sys.stderr,
                 )
 

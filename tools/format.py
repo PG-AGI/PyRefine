@@ -7,10 +7,14 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Iterable, Sequence, Tuple
+from typing import Iterable, Iterator, Sequence
+
+from gitignore_utils import GitignoreError, is_gitignored, load_gitignore_spec
 
 PYREFINE_ROOT = Path(__file__).resolve().parents[1]
 PYREFINE_DIRNAME = PYREFINE_ROOT.name
+FORMAT_BATCH_SIZE = 200
+GITIGNORE_SPEC = None
 
 def _load_dynamic_ignore_names() -> set[str]:
     raw = os.environ.get("PYREFINE_IGNORE_DIRS", "")
@@ -50,6 +54,69 @@ IGNORED_DIR_NAMES: set[str] = {
 BLACK_LINE_LENGTH = 79
 
 
+def ensure_gitignore_spec():
+    global GITIGNORE_SPEC
+    if GITIGNORE_SPEC is None:
+        try:
+            GITIGNORE_SPEC = load_gitignore_spec(PROJECT_ROOT)
+        except GitignoreError as exc:
+            print(f"[format] {exc}", file=sys.stderr)
+            sys.exit(1)
+    return GITIGNORE_SPEC
+
+
+def gitignored(path: Path) -> bool:
+    return is_gitignored(path, PROJECT_ROOT, ensure_gitignore_spec())
+
+
+def should_skip_dir(path: Path) -> bool:
+    if path.resolve() == PROJECT_ROOT.resolve():
+        return False
+    if path.name in IGNORED_DIR_NAMES or path.name in DYNAMIC_IGNORE_NAMES:
+        return True
+    return gitignored(path)
+
+
+def should_include_file(path: Path) -> bool:
+    if path.suffix != ".py":
+        return False
+    return not gitignored(path)
+
+
+def iter_python_files(sources: Iterable[Path]) -> Iterator[Path]:
+    for source in sources:
+        if source.is_file():
+            if should_include_file(source):
+                yield source.resolve()
+            continue
+        if not source.is_dir():
+            continue
+        for root, dirs, files in os.walk(source):
+            root_path = Path(root)
+            if should_skip_dir(root_path):
+                dirs[:] = []
+                continue
+            dirs[:] = [
+                d
+                for d in dirs
+                if not should_skip_dir(root_path / d)
+            ]
+            for filename in files:
+                candidate = root_path / filename
+                if should_include_file(candidate):
+                    yield candidate.resolve()
+
+
+def collect_targets(paths: Iterable[Path]) -> list[Path]:
+    files = deduplicate_paths(iter_python_files(paths))
+    return sorted(files)
+
+
+def chunked_targets(targets: list[Path], chunk_size: int = FORMAT_BATCH_SIZE):
+    for index in range(0, len(targets), chunk_size):
+        yield targets[index : index + chunk_size]
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -79,36 +146,22 @@ def ensure_absolute_path(path: str) -> Path:
     return target_path.resolve()
 
 
-def partition_paths(paths: Iterable[Path]) -> Tuple[list[Path], list[Path]]:
-    files: list[Path] = []
-    directories: list[Path] = []
-    for path in paths:
-        if path.is_dir():
-            directories.append(path)
-        else:
-            files.append(path)
-    return files, directories
-
 
 def gather_all_targets() -> list[Path]:
-    candidates: list[Path] = []
-    ignored = IGNORED_DIR_NAMES | DYNAMIC_IGNORE_NAMES
-    for child in PROJECT_ROOT.iterdir():
-        if child.name in ignored:
-            continue
-        if child.is_dir() or (child.is_file() and child.suffix == ".py"):
-            candidates.append(child)
-
-    return sorted(candidates)
+    return collect_targets([PROJECT_ROOT])
 
 
 def gather_targets(target: Path) -> list[Path]:
     if target.is_dir():
-        if target.name in DYNAMIC_IGNORE_NAMES:
+        if should_skip_dir(target):
             return []
-        return [target]
-    if target.is_file() and target.suffix == ".py":
-        return [target]
+        return collect_targets([target])
+    if target.is_file():
+        if target.suffix != ".py":
+            raise ValueError(f"{target} is neither a Python file nor a directory.")
+        if gitignored(target):
+            return []
+        return [target.resolve()]
     raise ValueError(f"{target} is neither a Python file nor a directory.")
 
 
@@ -154,26 +207,14 @@ def run_autoflake(targets: list[Path]) -> None:
     if executable is None:
         return
 
-    files, directories = partition_paths(targets)
-    if directories:
+    for batch in chunked_targets(targets):
         run_subprocess(
             [
                 executable,
                 "--in-place",
                 "--remove-all-unused-imports",
                 "--remove-unused-variables",
-                "--recursive",
-                *map(str, directories),
-            ]
-        )
-    if files:
-        run_subprocess(
-            [
-                executable,
-                "--in-place",
-                "--remove-all-unused-imports",
-                "--remove-unused-variables",
-                *map(str, files),
+                *map(str, batch),
             ]
         )
 
@@ -185,17 +226,18 @@ def run_isort(targets: list[Path]) -> None:
             "isort executable not found. Install dependencies first."
         )
 
-    run_subprocess(
-        [
-            executable,
-            "--profile",
-            "black",
-            "--line-length",
-            str(BLACK_LINE_LENGTH),
-            "--atomic",
-            *map(str, targets),
-        ]
-    )
+    for batch in chunked_targets(targets):
+        run_subprocess(
+            [
+                executable,
+                "--profile",
+                "black",
+                "--line-length",
+                str(BLACK_LINE_LENGTH),
+                "--atomic",
+                *map(str, batch),
+            ]
+        )
 
 
 def run_autopep8(targets: list[Path]) -> None:
@@ -203,9 +245,7 @@ def run_autopep8(targets: list[Path]) -> None:
     if executable is None:
         return
 
-    files, directories = partition_paths(targets)
-
-    if directories:
+    for batch in chunked_targets(targets):
         run_subprocess(
             [
                 executable,
@@ -214,20 +254,7 @@ def run_autopep8(targets: list[Path]) -> None:
                 "--aggressive",
                 "--max-line-length",
                 str(BLACK_LINE_LENGTH),
-                "--recursive",
-                *map(str, directories),
-            ]
-        )
-    if files:
-        run_subprocess(
-            [
-                executable,
-                "--in-place",
-                "--aggressive",
-                "--aggressive",
-                "--max-line-length",
-                str(BLACK_LINE_LENGTH),
-                *map(str, files),
+                *map(str, batch),
             ]
         )
 
@@ -239,14 +266,15 @@ def run_black(targets: list[Path]) -> None:
             "black executable not found. Install dependencies first."
         )
 
-    run_subprocess(
-        [
-            executable,
-            "--line-length",
-            str(BLACK_LINE_LENGTH),
-            *map(str, targets),
-        ]
-    )
+    for batch in chunked_targets(targets):
+        run_subprocess(
+            [
+                executable,
+                "--line-length",
+                str(BLACK_LINE_LENGTH),
+                *map(str, batch),
+            ]
+        )
 
 
 def run_flake8(targets: list[Path]) -> None:
@@ -256,7 +284,8 @@ def run_flake8(targets: list[Path]) -> None:
             "flake8 executable not found. Install dependencies first."
         )
 
-    run_subprocess([executable, *map(str, targets)])
+    for batch in chunked_targets(targets):
+        run_subprocess([executable, *map(str, batch)])
 
 
 def deduplicate_paths(paths: Iterable[Path]) -> list[Path]:

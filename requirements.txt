@@ -3,5 +3,6 @@ isort
 flake8
 autopep8
 autoflake
+pathspec
 pytest
 coverage

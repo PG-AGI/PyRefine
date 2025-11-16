@@ -12,6 +12,7 @@ import coverage_runner
 import scaffold_manager
 import setup_manager
 import update_manager
+from gitignore_utils import GitignoreError, is_gitignored, load_gitignore_spec
 
 APP_VERSION = "1.0"
 DEFAULT_MANIFEST_URL = os.environ.get(
@@ -141,9 +142,14 @@ def handle_setup(args: argparse.Namespace) -> None:
 
 def handle_test_coverage(args: argparse.Namespace) -> None:
     root = args.project_root.resolve()
+    try:
+        gitignore_spec = load_gitignore_spec(root)
+    except GitignoreError as exc:
+        print(f"[pyrefine] {exc}", file=sys.stderr)
+        sys.exit(1)
     target = args.test_coverage
     if target == TEST_COVERAGE_ALL:
-        projects = coverage_runner.discover_projects(root)
+        projects = coverage_runner.discover_projects(root, gitignore_spec)
         if not projects:
             print(
                 "[pyrefine] No Python projects found under "
@@ -158,6 +164,12 @@ def handle_test_coverage(args: argparse.Namespace) -> None:
             sys.exit(1)
         if not project_path.is_dir():
             print(f"[pyrefine] '{project_path}' is not a directory.", file=sys.stderr)
+            sys.exit(1)
+        if is_gitignored(project_path, root, gitignore_spec):
+            print(
+                f"[pyrefine] '{project_path}' is ignored via .gitignore; skipping.",
+                file=sys.stderr,
+            )
             sys.exit(1)
         projects = [project_path]
 

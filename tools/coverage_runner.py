@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from typing import Iterable, List
 
+from gitignore_utils import is_gitignored
+
 ARTIFACTS_DIRNAME = "pyrefine_artifacts"
 COVERAGE_SUBDIR = "coverage"
 IGNORED_PROJECT_NAMES = {
@@ -57,7 +59,7 @@ def looks_like_project(path: Path) -> bool:
     return False
 
 
-def discover_projects(root: Path) -> List[Path]:
+def discover_projects(root: Path, gitignore_spec) -> List[Path]:
     projects: List[Path] = []
     for child in sorted(root.iterdir()):
         if not child.is_dir():
@@ -65,6 +67,8 @@ def discover_projects(root: Path) -> List[Path]:
         if child.name in IGNORED_PROJECT_NAMES or child.name.startswith("."):
             continue
         if child.name.lower().startswith("pyrefine"):
+            continue
+        if is_gitignored(child, root, gitignore_spec):
             continue
         if looks_like_project(child):
             projects.append(child)
