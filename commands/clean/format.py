@@ -1,6 +1,22 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+"""
+Module Purpose:
+    Implements the formatter pipeline backing `--clean` and Run On Save workflows,
+    handling target discovery, gitignore filtering, and tool invocation.
+
+Key Components:
+    - gather_all_targets / gather_targets: Collect Python paths honoring .gitignore.
+    - run_autoflake / run_isort / run_black / run_flake8: Sequentially apply each tool.
+    - main: Parses CLI args to run the formatter in “all” or single-target modes.
+
+Project Contribution:
+    Ensures every PyRefine-managed repository adheres to consistent style and linting
+    rules, enabling automated hygiene across projects and CI environments.
+
+"""
+
 import argparse
 import os
 import shutil
@@ -9,7 +25,11 @@ import sys
 from pathlib import Path
 from typing import Iterable, Iterator, Sequence
 
-from gitignore_utils import GitignoreError, is_gitignored, load_gitignore_spec
+from shared.gitignore_utils import (
+    GitignoreError,
+    is_gitignored,
+    load_gitignore_spec,
+)
 
 PYREFINE_ROOT = Path(__file__).resolve().parents[1]
 PYREFINE_DIRNAME = PYREFINE_ROOT.name

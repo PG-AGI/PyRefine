@@ -1,6 +1,22 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+"""
+Module Purpose:
+    Discovers project directories and runs pytest with coverage reporting while
+    saving artifacts into a consistent `pyrefine_artifacts/<project>/coverage` tree.
+
+Key Components:
+    - _python_executable: Chooses the correct interpreter when PyRefine runs as an exe.
+    - run_pytest_with_coverage: Executes coverage commands and writes XML/HTML outputs.
+    - run_for_projects: Iterates over targets, surfacing errors and success paths.
+
+Project Contribution:
+    Powers the `--test-coverage` command so teams can enforce testing standards,
+    archive reports for CI, and keep coverage automation cross-platform.
+
+"""
+
 import os
 import shutil
 import subprocess
@@ -8,7 +24,7 @@ import sys
 from pathlib import Path
 from typing import Iterable, List
 
-from gitignore_utils import is_gitignored
+from shared.gitignore_utils import is_gitignored
 
 ARTIFACTS_DIRNAME = "pyrefine_artifacts"
 COVERAGE_SUBDIR = "coverage"

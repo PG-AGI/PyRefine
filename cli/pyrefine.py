@@ -1,18 +1,35 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+"""
+Module Purpose:
+    Acts as the primary CLI entry point that routes user flags to scaffolding,
+    cleaning, setup, coverage, and self-update workflows.
+
+Key Components:
+    - parse_args: Validates mutually exclusive flags and default behaviors.
+    - handle_create / handle_clean / handle_setup / handle_test_coverage / handle_update:
+      Dispatchers that invoke the respective managers.
+    - main: Bootstraps the CLI by resolving arguments and calling the chosen handler.
+
+Project Contribution:
+    Provides the cohesive command surface for PyRefine so every automation task can
+    be triggered with consistent flags across platforms and packaging modes.
+
+"""
+
 import argparse
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-import clean_manager
-import coverage_runner
-import scaffold_manager
-import setup_manager
-import update_manager
-from gitignore_utils import GitignoreError, is_gitignored, load_gitignore_spec
+from commands.clean import clean_manager
+from commands.create import scaffold_manager
+from commands.setup import setup_manager
+from commands.test_coverage import coverage_runner
+from commands.update import update_manager
+from shared.gitignore_utils import GitignoreError, is_gitignored, load_gitignore_spec
 
 APP_VERSION = "1.0"
 DEFAULT_MANIFEST_URL = os.environ.get(
@@ -42,8 +59,8 @@ def get_resource_root() -> Path:
 
 
 RESOURCE_ROOT = get_resource_root()
-FORMAT_SCRIPT = RESOURCE_ROOT / "tools" / "format.py"
-FLAKE8_TEMPLATE = RESOURCE_ROOT / ".flake8"
+FORMAT_SCRIPT = RESOURCE_ROOT / "commands" / "clean" / "format.py"
+FLAKE8_TEMPLATE = RESOURCE_ROOT / "configs" / ".flake8"
 
 
 def parse_args() -> argparse.Namespace:
@@ -135,7 +152,7 @@ def handle_create(args: argparse.Namespace) -> None:
     scaffold_manager.ensure_scaffold(project_root, RESOURCE_ROOT)
     print("Scaffold complete.")
     print(
-        "Run 'python PyRefine/tools/pyrefine.py --setup' to configure VS Code."
+        "Run 'python PyRefine/cli/pyrefine.py --setup' to configure VS Code."
     )
 
 

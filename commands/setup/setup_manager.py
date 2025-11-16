@@ -1,6 +1,22 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+"""
+Module Purpose:
+    Handles the `--setup` command by provisioning VS Code settings plus pip and UV
+    environments tailored to a project’s requirements.
+
+Key Components:
+    - configure_vscode: Writes/merges `.vscode/settings.json` and extension recommendations.
+    - create_pip_environment / create_uv_environment: Ensure toolchains exist and install dependencies.
+    - run_setup: Coordinates editor configuration and environment provisioning using shared resources.
+
+Project Contribution:
+    Automates onboarding for developers so every project inherits the same editor tooling
+    and dual-environment strategy, reducing drift across machines.
+
+"""
+
 import json
 import os
 import shutil
@@ -8,7 +24,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import common_vscode as cv
+from shared import common_vscode as cv
 
 PIP_ENV_DIRNAME = ".venv"
 UV_ENV_DIRNAME = ".uv-env"

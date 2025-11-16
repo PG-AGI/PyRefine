@@ -2,10 +2,13 @@
 
 
 a = Analysis(
-    ['H:\\PGAGI\\PyRefine\\tools\\pyrefine.py'],
+    ['H:\\PGAGI\\PyRefine\\cli\\pyrefine.py'],
     pathex=[],
     binaries=[],
-    datas=[('H:\\PGAGI\\PyRefine\\tools\\format.py', 'PyRefine/tools'), ('H:\\PGAGI\\PyRefine\\tools\\setup_workspace.py', 'PyRefine/tools'), ('H:\\PGAGI\\PyRefine\\.flake8', 'PyRefine')],
+    datas=[
+        ('H:\\PGAGI\\PyRefine\\commands\\clean\\format.py', 'PyRefine/commands/clean'),
+        ('H:\\PGAGI\\PyRefine\\configs\\.flake8', 'PyRefine/configs'),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

@@ -1,6 +1,22 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+"""
+Module Purpose:
+    Generates the canonical PyRefine project layout, template files, and supporting
+    configuration assets used by the `--create` workflow.
+
+Key Components:
+    - ensure_scaffold: Creates directories/files and reports what was added.
+    - ensure_flake8: Copies or synthesizes the shared Flake8 configuration.
+    - _ensure_directories / _ensure_template_files: Internal helpers that materialize folders and templates.
+
+Project Contribution:
+    Gives teams a consistent starting point (FastAPI app, tests, Dockerfile, configs)
+    so PyRefine can immediately apply formatting, setup, and coverage automation.
+
+"""
+
 import os
 import shutil
 from pathlib import Path
@@ -212,7 +228,7 @@ def ensure_scaffold(project_root: Path, resource_root: Path) -> None:
 
 
 def ensure_flake8(project_root: Path, resource_root: Path) -> bool:
-    template = resource_root / ".flake8"
+    template = resource_root / "configs" / ".flake8"
     destination = project_root / ".flake8"
     if destination.exists():
         return False

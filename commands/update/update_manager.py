@@ -1,6 +1,22 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+"""
+Module Purpose:
+    Implements the self-update flow for packaged PyRefine binaries by consuming a
+    manifest, downloading artifacts, and scheduling replacements.
+
+Key Components:
+    - handle_update: Entry point that validates versions, selects artifacts, and orchestrates work.
+    - download_release_binary: Streams and verifies the new binary against checksums.
+    - apply_update_binary / schedule_windows_replace: Swap executables safely on each platform.
+
+Project Contribution:
+    Keeps distributed PyRefine binaries up to date without manual downloads, ensuring
+    users always run the latest automation features with minimal friction.
+
+"""
+
 import argparse
 import hashlib
 import json

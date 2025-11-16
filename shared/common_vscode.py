@@ -1,7 +1,22 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import argparse
+"""
+Module Purpose:
+    Provides shared helpers for writing VS Code settings/extension files and
+    configuring Run On Save commands tailored for PyRefine workflows.
+
+Key Components:
+    - build_settings_payload: Generates the opinionated VS Code settings dictionary.
+    - build_extensions_payload: Lists recommended extensions including Pylance.
+    - merge_run_on_save: Ensures format hooks reference the correct formatter path.
+
+Project Contribution:
+    Centralizes VS Code configuration logic so multiple PyRefine commands (`--setup`,
+    legacy bootstrap scripts, etc.) can reliably provision editors with identical tooling.
+
+"""
+
 import json
 import os
 import shutil
@@ -41,7 +56,7 @@ def pylance_installed() -> bool:
         except subprocess.CalledProcessError:
             continue
 
-    candidates = []
+    candidates: list[Path] = []
     home = Path.home()
     candidates.append(home / ".vscode" / "extensions")
     candidates.append(home / ".vscode-insiders" / "extensions")
@@ -58,9 +73,7 @@ def pylance_installed() -> bool:
 def notify_pylance_missing() -> None:
     message = (
         "The Pylance extension (ms-python.vscode-pylance) was not detected.\n"
-        "Installing it is highly recommended for richer IntelliSense, "
-        "smarter autocompletion, and an improved Python development "
-        "experience.\n\n"
+        "Installing it is highly recommended for richer IntelliSense, smarter autocompletion, and an improved Python development experience.\n\n"
         "Marketplace link:\n"
         "https://marketplace.visualstudio.com/items?itemName="
         "ms-python.vscode-pylance"
@@ -78,24 +91,6 @@ def notify_pylance_missing() -> None:
             )
         except Exception:
             pass
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description=("Write VS Code workspace settings for PyRefine.")
-    )
-    parser.add_argument(
-        "--project-root",
-        type=Path,
-        help=(
-            "Project root directory (defaults to the current working "
-            "directory)."
-        ),
-    )
-    parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Overwrite existing files without prompting.",
-    )
-    return parser.parse_args()
 
 
 def formatter_reference(project_root: Path, format_script: Path) -> str:
@@ -106,11 +101,10 @@ def formatter_reference(project_root: Path, format_script: Path) -> str:
         return format_script.as_posix()
 
 
-def build_settings(
+def build_settings_payload(
     project_root: Path, format_script: Path
 ) -> dict[str, object]:
-    formatter_cmd = formatter_reference(project_root, format_script)
-    command = f'python "{formatter_cmd}" "${{file}}"'
+    command = f'python "{formatter_reference(project_root, format_script)}" "${{file}}"'
     return {
         "editor.formatOnSave": True,
         "[python]": {
@@ -152,56 +146,59 @@ def build_settings(
     }
 
 
-def build_extensions() -> dict[str, object]:
+def build_extensions_payload() -> dict[str, object]:
     return {
         "recommendations": [
             "ms-python.python",
             "ms-python.black-formatter",
             "ms-python.isort",
             "ms-python.flake8",
+            "ms-python.vscode-pylance",
             "emeraldwalk.runonsave",
         ],
         "unwantedRecommendations": [
             "ms-python.pylint",
-            "ms-python.vscode-pylance",
             "charliermarsh.ruff",
         ],
     }
 
 
-def confirm(path: Path, force: bool, label: str) -> bool:
-    if force or not path.exists():
-        return True
-    prompt = f"{label} already exists. Overwrite? [y/N]: "
-    answer = input(prompt).strip().lower()
-    return answer in {"y", "yes"}
+def merge_dict(
+    base: dict[str, object], updates: dict[str, object]
+) -> dict[str, object]:
+    result = dict(base)
+    for key, value in updates.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = merge_dict(result[key], value)
+        elif (
+            key in result and isinstance(result[key], list) and isinstance(value, list)
+        ):
+            combined = list(result[key])
+            for item in value:
+                if item not in combined:
+                    combined.append(item)
+            result[key] = combined
+        else:
+            result[key] = value
+    return result
 
 
-def write_json(path: Path, payload: dict[str, object]) -> None:
-    path.write_text(json.dumps(payload, indent=4) + "\n", encoding="utf-8")
-
-
-def main() -> None:
-    args = parse_args()
-    project_root = (args.project_root or Path.cwd()).resolve()
-    resource_root = get_resource_root()
-    format_script = resource_root / "tools" / "format.py"
-
-    settings_dir = project_root / ".vscode"
-    settings_dir.mkdir(parents=True, exist_ok=True)
-
-    settings_path = settings_dir / "settings.json"
-    if confirm(settings_path, args.force, "settings.json"):
-        write_json(settings_path, build_settings(project_root, format_script))
-
-    extensions_path = settings_dir / "extensions.json"
-    if confirm(extensions_path, args.force, "extensions.json"):
-        write_json(extensions_path, build_extensions())
-
-    if not pylance_installed():
-        notify_pylance_missing()
-    print(f"Workspace settings written to {settings_dir}")
-
-
-if __name__ == "__main__":
-    main()
+def merge_run_on_save(
+    settings: dict[str, object], project_root: Path, format_script: Path
+) -> dict[str, object]:
+    commands_obj = settings.get("emeraldwalk.runonsave")
+    if not isinstance(commands_obj, dict):
+        return settings
+    commands = commands_obj.get("commands")
+    if not isinstance(commands, list):
+        return settings
+    desired_cmd = (
+        f'python "{formatter_reference(project_root, format_script)}" "${{file}}"'
+    )
+    if any(
+        isinstance(entry, dict) and entry.get("cmd") == desired_cmd
+        for entry in commands
+    ):
+        return settings
+    commands.append({"match": "\\.py$", "cmd": desired_cmd, "runIn": "terminal"})
+    return settings

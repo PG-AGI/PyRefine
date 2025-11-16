@@ -1,0 +1,83 @@
+# dicrectories which are for testing
+.ruff_cache/
+crack-dev-backend/
+
+
+
+
+# Byte-compiled files
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Virtual environment directories
+env/
+venv/
+ENV/
+.venv/
+PyRefine_env/
+manifests/
+.env
+.uv-env/
+pyrefine_artifacts/
+unit_tests/
+integration_tests/
+
+# Distribution / packaging
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# IDE/editor-specific files
+# .vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# Log files
+*.log
+
+# Python test result directories
+.coverage
+nosetests.xml
+coverage.xml
+*.cover
+*.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Flask
+instance/
+.webassets-cache
+
+# PyCharm
+.idea/
+
+# Pytest
+.cache/
+
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+db.sqlite3
+/staticfiles/
+media/
+
+# System files
+*.bak
+*.tmp
