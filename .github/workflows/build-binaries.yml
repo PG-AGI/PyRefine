@@ -37,7 +37,12 @@ jobs:
       - name: Build Binary
         run: |
           python commands/build_exe/build_exe.py
-          echo "PYREFINE_VERSION=$(python -c \"import json, pathlib; path=pathlib.Path('release/manifest.json'); print(json.loads(path.read_text())['version'])\")" >> $GITHUB_ENV
+
+      - name: Determine Version
+        shell: bash
+        run: |
+          VERSION=$(python -c "import json, pathlib; p=pathlib.Path('release/manifest.json'); print(json.loads(p.read_text())['version'])")
+          echo "PYREFINE_VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Rename artifact (Windows)
         if: matrix.os == 'windows-latest'
