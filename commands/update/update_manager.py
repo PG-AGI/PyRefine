@@ -32,6 +32,8 @@ from pathlib import Path
 DOWNLOAD_BUFFER_SIZE = 64 * 1024
 CHECKSUM_ALGORITHM = "sha256"
 WINDOWS = os.name == "nt"
+MACOS = sys.platform == "darwin"
+LINUX = sys.platform.startswith("linux")
 
 
 class UpdateError(RuntimeError):
@@ -141,6 +143,10 @@ def select_artifact(manifest: dict[str, object]) -> tuple[str, str]:
     preferred_keys: list[str] = []
     if WINDOWS:
         preferred_keys.extend(["windows", "win64", "win32"])
+    elif MACOS:
+        preferred_keys.extend(["macos", "darwin"])
+    elif LINUX:
+        preferred_keys.extend(["linux", sys.platform])
     else:
         preferred_keys.extend([sys.platform, "linux", "darwin"])
     preferred_keys.append("default")
@@ -234,12 +240,23 @@ def apply_update_binary(current_executable: Path, downloaded_path: Path) -> None
         print("Update scheduled. The executable will be replaced shortly.")
         return
 
-    replacement_path = destination_dir / (current_executable.name + ".updated")
-    shutil.move(str(downloaded_path), replacement_path)
-    print(
-        "Downloaded updated binary to "
-        f"{replacement_path}. Replace the current executable manually."
-    )
+    staged_path = destination_dir / (current_executable.name + ".new")
+    shutil.move(str(downloaded_path), staged_path)
+    staged_path.chmod(0o755)
+
+    backup_path: Path | None = destination_dir / (current_executable.name + ".bak")
+    try:
+        if backup_path.exists():
+            backup_path.unlink()
+        current_executable.replace(backup_path)
+    except OSError:
+        backup_path = None
+
+    staged_path.replace(current_executable)
+    print("Update applied.")
+    if backup_path is not None:
+        print(f"A backup of the previous binary was saved to {backup_path}.")
+    print("Relaunch PyRefine to use the updated executable.")
 
 
 def _normalise_checksum(expected: str) -> tuple[str, str]:

@@ -2,8 +2,16 @@
   "version": "1.1",
   "artifacts": {
     "windows": {
-      "url": "https://github.com/PG-AGI/PyRefine/releases/download/1.1/pyrefine_1.1.exe",
-      "checksum": "sha256:5935d4037f37aaeddad4c7ee08bee7d68479e89885632c71d825b06ecf8008f2"
+      "url": "https://github.com/PG-AGI/PyRefine/releases/download/1.1/pyrefine-windows-1.1.exe",
+      "checksum": "sha256:TODO_WINDOWS_SHA"
+    },
+    "macos": {
+      "url": "https://github.com/PG-AGI/PyRefine/releases/download/1.1/pyrefine-macos-1.1",
+      "checksum": "sha256:TODO_MAC_SHA"
+    },
+    "linux": {
+      "url": "https://github.com/PG-AGI/PyRefine/releases/download/1.1/pyrefine-linux-1.1",
+      "checksum": "sha256:TODO_LINUX_SHA"
     }
   },
   "release_notes": "Updated to version 1.1 with improved features and bug fixes."
