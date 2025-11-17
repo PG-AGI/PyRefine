@@ -1,10 +1,6 @@
 # PyRefine
 
-## 1. What is this project?
-
-PyRefine is a lightweight toolkit that keeps Python repositories tidy. It can scaffold a clean layout, format code, set up editor + virtual environments, run coverage, and update itself—helping teams onboard quickly without manual cleanup.
-
-## 2. How to use this project (Mac, Windows, Ubuntu)
+## 1. How to use this project (Mac, Windows, Ubuntu)
 
 - **macOS**
   ```bash
@@ -22,7 +18,7 @@ PyRefine is a lightweight toolkit that keeps Python repositories tidy. It can sc
   ```
 - Add `--project-root C:\path\to\project` (or `/path/to/project`) if the binary isn’t placed directly in the repo root.
 
-**Commands**
+## 2. Commands
 
 - `pyrefine.exe` – defaults to `--clean .`, removing caches and formatting the current repo.
 - `pyrefine --clean <path>` – formats the given file/folder/project using Autoflake → Isort → Autopep8 → Black → Flake8.
@@ -30,3 +26,10 @@ PyRefine is a lightweight toolkit that keeps Python repositories tidy. It can sc
 - `pyrefine --setup` – writes VS Code settings, installs recommended extensions, and provisions `.venv` plus `.uv-env`.
 - `pyrefine --test-coverage [path]` – runs pytest with coverage for the current project or a specified directory, saving reports under `pyrefine_artifacts/<project>/coverage`.
 - `pyrefine --update [--manifest-url URL]` – downloads and applies the latest packaged release (Windows exe replaces itself automatically).
+- `pyrefine --version` – prints the version of the binary you’re running.
+
+## 3. Future Work
+
+- Optional Docker compose templates for multi-service repos.  
+- Poetry support alongside pip/UV for dependency management.  
+- Dashboard-style output summarizing formatting, coverage, and scaffold status.  

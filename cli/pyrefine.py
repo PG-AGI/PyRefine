@@ -19,6 +19,7 @@ Project Contribution:
 """
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -30,8 +31,6 @@ from commands.setup import setup_manager
 from commands.test_coverage import coverage_runner
 from commands.update import update_manager
 from shared.gitignore_utils import GitignoreError, is_gitignored, load_gitignore_spec
-
-APP_VERSION = "1.0"
 DEFAULT_MANIFEST_URL = os.environ.get(
     "PYREFINE_UPDATE_URL",
     "https://raw.githubusercontent.com/PG-AGI/PyRefine/pyrefine.exe/release/manifest.json",
@@ -59,22 +58,37 @@ def get_resource_root() -> Path:
 
 
 RESOURCE_ROOT = get_resource_root()
+APP_VERSION = "unknown"
+
+
+def _load_app_version(resource_root: Path) -> str:
+    manifest_path = resource_root / "release" / "manifest.json"
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return "unknown"
+    version = data.get("version")
+    if isinstance(version, str) and version.strip():
+        return version.strip()
+    return "unknown"
+
+
+APP_VERSION = _load_app_version(RESOURCE_ROOT)
 FORMAT_SCRIPT = RESOURCE_ROOT / "commands" / "clean" / "format.py"
 FLAKE8_TEMPLATE = RESOURCE_ROOT / "configs" / ".flake8"
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=("PyRefine CLI for scaffolding, cleanup, environments, and updates.")
+        description=(
+            "PyRefine CLI for scaffolding, cleanup, environments, and updates."
+        )
     )
     parser.add_argument(
         "--project-root",
         type=Path,
         default=Path.cwd(),
-        help=(
-            "Project root folder (defaults to the current working "
-            "directory)."
-        ),
+        help=("Project root folder (defaults to the current working " "directory)."),
     )
     parser.add_argument(
         "--create",
@@ -124,6 +138,11 @@ def parse_args() -> argparse.Namespace:
             "PYREFINE_UPDATE_URL environment variable (if set)."
         ),
     )
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Print the current PyRefine version and exit.",
+    )
     args = parser.parse_args()
 
     actions = sum(
@@ -133,13 +152,16 @@ def parse_args() -> argparse.Namespace:
             1 if args.setup else 0,
             1 if args.test_coverage is not None else 0,
             1 if args.update else 0,
+            1 if args.version else 0,
         ]
     )
     if actions > 1:
         parser.error(
             "Please choose only one action at a time "
-            "(--create, --clean, --setup, --test-coverage, or --update)."
+            "(--create, --clean, --setup, --test-coverage, --update, or --version)."
         )
+    if args.version:
+        return args
     if args.update:
         return args  # no default action when explicitly updating
     if actions == 0:
@@ -151,9 +173,7 @@ def handle_create(args: argparse.Namespace) -> None:
     project_root = args.project_root.resolve()
     scaffold_manager.ensure_scaffold(project_root, RESOURCE_ROOT)
     print("Scaffold complete.")
-    print(
-        "Run 'python PyRefine/cli/pyrefine.py --setup' to configure VS Code."
-    )
+    print("Run 'python PyRefine/cli/pyrefine.py --setup' to configure VS Code.")
 
 
 def handle_clean(args: argparse.Namespace) -> None:
@@ -202,8 +222,7 @@ def handle_test_coverage(args: argparse.Namespace) -> None:
         sys.exit(1)
     except subprocess.CalledProcessError as exc:
         print(
-            "[pyrefine] Coverage command failed "
-            f"(exit code {exc.returncode}).",
+            "[pyrefine] Coverage command failed " f"(exit code {exc.returncode}).",
             file=sys.stderr,
         )
         sys.exit(exc.returncode)
@@ -219,6 +238,9 @@ def handle_update(args: argparse.Namespace) -> None:
 
 def main() -> None:
     args = parse_args()
+    if args.version:
+        print(f"PyRefine version {APP_VERSION}")
+        return
     if args.create:
         handle_create(args)
     elif args.clean is not None:
@@ -230,9 +252,7 @@ def main() -> None:
     elif args.update:
         handle_update(args)
     else:
-        raise AssertionError(
-            "Unreachable: at least one action must be specified."
-        )
+        raise AssertionError("Unreachable: at least one action must be specified.")
 
 
 if __name__ == "__main__":

@@ -38,27 +38,21 @@ jobs:
         run: |
           python commands/build_exe/build_exe.py
 
-      - name: Determine Version
-        shell: bash
-        run: |
-          VERSION=$(python -c "import json, pathlib; p=pathlib.Path('release/manifest.json'); print(json.loads(p.read_text())['version'])")
-          echo "PYREFINE_VERSION=$VERSION" >> "$GITHUB_ENV"
-
       - name: Rename artifact (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          Rename-Item -Path "dist/pyrefine.exe" -NewName ("pyrefine_" + $env:PYREFINE_VERSION + ".exe")
+          Rename-Item -Path "dist/pyrefine.exe" -NewName "pyrefine.exe" -Force
 
       - name: Rename artifact (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
-          mv dist/pyrefine "dist/pyrefine_linux_${{ env.PYREFINE_VERSION }}"
+          mv dist/pyrefine dist/pyrefine-linux
 
       - name: Rename artifact (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          mv dist/pyrefine "dist/pyrefine_macos_${{ env.PYREFINE_VERSION }}"
+          mv dist/pyrefine dist/pyrefine-macos
 
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4

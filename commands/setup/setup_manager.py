@@ -158,6 +158,10 @@ def create_pip_environment(project_root: Path) -> None:
 
 
 def create_uv_environment(project_root: Path) -> None:
+    base_python = _get_base_python()
+    print("[setup] Ensuring 'uv' CLI is installed via pip")
+    subprocess.run([base_python, "-m", "pip", "install", "--upgrade", "uv"], check=True)
+
     uv_exec = shutil.which("uv")
     if not uv_exec:
         print("[setup] 'uv' command not found. Skipping UV environment.")
@@ -194,7 +198,7 @@ def create_uv_environment(project_root: Path) -> None:
 
 
 def run_setup(project_root: Path, resource_root: Path) -> None:
-    format_script = resource_root / "tools" / "format.py"
+    format_script = resource_root / "commands" / "clean" / "format.py"
     configure_vscode(project_root, format_script)
     create_pip_environment(project_root)
     create_uv_environment(project_root)
