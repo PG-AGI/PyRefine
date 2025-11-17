@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - 'v*'
+      - "v*"
     branches:
       - feature/multi-platform-build
 
@@ -26,7 +26,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-          cache: 'pip'
+          cache: "pip"
 
       - name: Install dependencies
         run: |
@@ -37,22 +37,23 @@ jobs:
       - name: Build Binary
         run: |
           python commands/build_exe/build_exe.py
+          echo "PYREFINE_VERSION=$(python -c \"import json, pathlib; path=pathlib.Path('release/manifest.json'); print(json.loads(path.read_text())['version'])\")" >> $GITHUB_ENV
 
       - name: Rename artifact (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          Rename-Item -Path "dist/pyrefine.exe" -NewName "pyrefine-windows.exe"
+          Rename-Item -Path "dist/pyrefine.exe" -NewName ("pyrefine_" + $env:PYREFINE_VERSION + ".exe")
 
       - name: Rename artifact (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
-          mv dist/pyrefine dist/pyrefine-linux
+          mv dist/pyrefine "dist/pyrefine_linux_${{ env.PYREFINE_VERSION }}"
 
       - name: Rename artifact (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          mv dist/pyrefine dist/pyrefine-macos
+          mv dist/pyrefine "dist/pyrefine_macos_${{ env.PYREFINE_VERSION }}"
 
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
@@ -60,4 +61,3 @@ jobs:
           name: pyrefine-${{ matrix.os }}
           path: |
             dist/*
-
