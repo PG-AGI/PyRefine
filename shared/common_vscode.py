@@ -17,7 +17,6 @@ Project Contribution:
 
 """
 
-import json
 import os
 import shutil
 import subprocess
@@ -65,7 +64,9 @@ def pylance_installed() -> bool:
     for base in candidates:
         if base.exists():
             for child in base.iterdir():
-                if child.is_dir() and child.name.startswith(PYLANCE_EXTENSION_ID):
+                if child.is_dir() and child.name.startswith(
+                    PYLANCE_EXTENSION_ID
+                ):
                     return True
     return False
 
@@ -104,7 +105,10 @@ def formatter_reference(project_root: Path, format_script: Path) -> str:
 def build_settings_payload(
     project_root: Path, format_script: Path
 ) -> dict[str, object]:
-    command = f'python "{formatter_reference(project_root, format_script)}" "${{file}}"'
+    command = f'python "{
+        formatter_reference(
+            project_root,
+            format_script)}" "${{file}}"'
     return {
         "editor.formatOnSave": True,
         "[python]": {
@@ -168,10 +172,16 @@ def merge_dict(
 ) -> dict[str, object]:
     result = dict(base)
     for key, value in updates.items():
-        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+        if (
+            key in result
+            and isinstance(result[key], dict)
+            and isinstance(value, dict)
+        ):
             result[key] = merge_dict(result[key], value)
         elif (
-            key in result and isinstance(result[key], list) and isinstance(value, list)
+            key in result
+            and isinstance(result[key], list)
+            and isinstance(value, list)
         ):
             combined = list(result[key])
             for item in value:
@@ -192,13 +202,16 @@ def merge_run_on_save(
     commands = commands_obj.get("commands")
     if not isinstance(commands, list):
         return settings
-    desired_cmd = (
-        f'python "{formatter_reference(project_root, format_script)}" "${{file}}"'
-    )
+    desired_cmd = f'python "{
+            formatter_reference(
+                project_root,
+                format_script)}" "${file} "'
     if any(
         isinstance(entry, dict) and entry.get("cmd") == desired_cmd
         for entry in commands
     ):
         return settings
-    commands.append({"match": "\\.py$", "cmd": desired_cmd, "runIn": "terminal"})
+    commands.append(
+        {"match": "\\.py$", "cmd": desired_cmd, "runIn": "terminal"}
+    )
     return settings

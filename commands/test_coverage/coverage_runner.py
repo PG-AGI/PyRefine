@@ -4,16 +4,21 @@ from __future__ import annotations
 """
 Module Purpose:
     Discovers project directories and runs pytest with coverage reporting while
-    saving artifacts into a consistent `pyrefine_artifacts/<project>/coverage` tree.
+     saving artifacts into a consistent `pyrefine_artifacts/<project>/coverage`
+     tree.
 
 Key Components:
-    - _python_executable: Chooses the correct interpreter when PyRefine runs as an exe.
-    - run_pytest_with_coverage: Executes coverage commands and writes XML/HTML outputs.
-    - run_for_projects: Iterates over targets, surfacing errors and success paths.
+    - _python_executable: Chooses the correct interpreter when PyRefine runs
+     as an exe.
+    - run_pytest_with_coverage: Executes coverage commands and writes XML/HTML
+     outputs.
+    - run_for_projects: Iterates over targets, surfacing errors and success
+     paths.
 
 Project Contribution:
-    Powers the `--test-coverage` command so teams can enforce testing standards,
-    archive reports for CI, and keep coverage automation cross-platform.
+    Powers the `--test-coverage` command so teams can enforce testing
+    standards, archive reports for CI, and keep coverage automation
+    cross-platform.
 
 """
 
@@ -54,7 +59,8 @@ class CoverageError(RuntimeError):
 
 def _python_executable() -> str:
     """
-    Coverage needs a real Python interpreter; the packaged exe cannot run modules.
+    Coverage needs a real Python interpreter; the packaged exe cannot run
+     modules.
     """
     if getattr(sys, "frozen", False):
         for candidate in ("python.exe", "python", "python3"):
@@ -92,7 +98,12 @@ def discover_projects(root: Path, gitignore_spec) -> List[Path]:
 
 
 def project_artifact_dir(project_dir: Path) -> Path:
-    base = project_dir.parent / ARTIFACTS_DIRNAME / project_dir.name / COVERAGE_SUBDIR
+    base = (
+        project_dir.parent
+        / ARTIFACTS_DIRNAME
+        / project_dir.name
+        / COVERAGE_SUBDIR
+    )
     base.mkdir(parents=True, exist_ok=True)
     return base
 
@@ -150,4 +161,3 @@ def run_for_projects(projects: Iterable[Path]) -> None:
         )
     if not ran_any:
         raise CoverageError("No projects were provided for coverage.")
-

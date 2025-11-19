@@ -3,8 +3,8 @@ from __future__ import annotations
 
 """
 Module Purpose:
-    Provides helpers for loading `.gitignore` files and determining whether paths
-    should be considered ignored by PyRefine routines.
+    Provides helpers for loading `.gitignore` files and determining whether
+    paths should be considered ignored by PyRefine routines.
 
 Key Components:
     - load_gitignore_spec: Parses gitignore patterns via PathSpec for reuse.
@@ -12,8 +12,8 @@ Key Components:
     - GitignoreError: Communicates when a required .gitignore file is missing.
 
 Project Contribution:
-    Centralizes ignore logic so cleaners, formatters, and coverage runs consistently
-    respect user-defined exclusions across the PyRefine toolchain.
+    Centralizes ignore logic so cleaners, formatters, and coverage runs
+    consistently respect user-defined exclusions across the PyRefine toolchain.
 
 """
 
@@ -41,7 +41,9 @@ def load_gitignore_spec(project_root: Path) -> PathSpec:
     return PathSpec.from_lines("gitwildmatch", lines)
 
 
-def is_gitignored(path: Path, project_root: Path, spec: PathSpec | None) -> bool:
+def is_gitignored(
+    path: Path, project_root: Path, spec: PathSpec | None
+) -> bool:
     if spec is None:
         return False
     try:

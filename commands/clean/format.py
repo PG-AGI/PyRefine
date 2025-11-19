@@ -3,17 +3,22 @@ from __future__ import annotations
 
 """
 Module Purpose:
-    Implements the formatter pipeline backing `--clean` and Run On Save workflows,
+    Implements the formatter pipeline backing `--clean` and Run On Save
+     workflows,
     handling target discovery, gitignore filtering, and tool invocation.
 
 Key Components:
-    - gather_all_targets / gather_targets: Collect Python paths honoring .gitignore.
-    - run_autoflake / run_isort / run_black / run_flake8: Sequentially apply each tool.
-    - main: Parses CLI args to run the formatter in “all” or single-target modes.
+    - gather_all_targets / gather_targets: Collect Python paths honoring
+     .gitignore.
+    - run_autoflake / run_isort / run_black / run_flake8: Sequentially apply
+     each tool.
+    - main: Parses CLI args to run the formatter in “all” or single-target
+     modes.
 
 Project Contribution:
-    Ensures every PyRefine-managed repository adheres to consistent style and linting
-    rules, enabling automated hygiene across projects and CI environments.
+    Ensures every PyRefine-managed repository adheres to consistent style and
+     linting rules, enabling automated hygiene across projects and CI
+     environments.
 
 """
 
@@ -36,13 +41,16 @@ PYREFINE_DIRNAME = PYREFINE_ROOT.name
 FORMAT_BATCH_SIZE = 200
 GITIGNORE_SPEC = None
 
+
 def _load_dynamic_ignore_names() -> set[str]:
     raw = os.environ.get("PYREFINE_IGNORE_DIRS", "")
     if not raw:
         return set()
     return {entry.strip() for entry in raw.split(",") if entry.strip()}
 
+
 DYNAMIC_IGNORE_NAMES: set[str] = _load_dynamic_ignore_names()
+
 
 def determine_project_root() -> Path:
     env_root = os.environ.get("PYREFINE_PROJECT_ROOT")
@@ -116,11 +124,7 @@ def iter_python_files(sources: Iterable[Path]) -> Iterator[Path]:
             if should_skip_dir(root_path):
                 dirs[:] = []
                 continue
-            dirs[:] = [
-                d
-                for d in dirs
-                if not should_skip_dir(root_path / d)
-            ]
+            dirs[:] = [d for d in dirs if not should_skip_dir(root_path / d)]
             for filename in files:
                 candidate = root_path / filename
                 if should_include_file(candidate):
@@ -134,7 +138,7 @@ def collect_targets(paths: Iterable[Path]) -> list[Path]:
 
 def chunked_targets(targets: list[Path], chunk_size: int = FORMAT_BATCH_SIZE):
     for index in range(0, len(targets), chunk_size):
-        yield targets[index : index + chunk_size]
+        yield targets[index: index + chunk_size]
 
 
 def parse_args() -> argparse.Namespace:
@@ -166,7 +170,6 @@ def ensure_absolute_path(path: str) -> Path:
     return target_path.resolve()
 
 
-
 def gather_all_targets() -> list[Path]:
     return collect_targets([PROJECT_ROOT])
 
@@ -178,7 +181,9 @@ def gather_targets(target: Path) -> list[Path]:
         return collect_targets([target])
     if target.is_file():
         if target.suffix != ".py":
-            raise ValueError(f"{target} is neither a Python file nor a directory.")
+            raise ValueError(
+                f"{target} is neither a Python file nor a directory."
+            )
         if gitignored(target):
             return []
         return [target.resolve()]

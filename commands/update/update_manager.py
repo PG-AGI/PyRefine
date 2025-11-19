@@ -3,17 +3,21 @@ from __future__ import annotations
 
 """
 Module Purpose:
-    Implements the self-update flow for packaged PyRefine binaries by consuming a
-    manifest, downloading artifacts, and scheduling replacements.
+    Implements the self-update flow for packaged PyRefine binaries by
+    consuming a manifest, downloading artifacts, and scheduling replacements.
 
 Key Components:
-    - handle_update: Entry point that validates versions, selects artifacts, and orchestrates work.
-    - download_release_binary: Streams and verifies the new binary against checksums.
-    - apply_update_binary / schedule_windows_replace: Swap executables safely on each platform.
+    - handle_update: Entry point that validates versions, selects artifacts,
+     and orchestrates work.
+    - download_release_binary: Streams and verifies the new binary against
+     checksums.
+    - apply_update_binary / schedule_windows_replace: Swap executables safely
+     on each platform.
 
 Project Contribution:
-    Keeps distributed PyRefine binaries up to date without manual downloads, ensuring
-    users always run the latest automation features with minimal friction.
+    Keeps distributed PyRefine binaries up to date without manual downloads,
+    ensuring users always run the latest automation features with minimal
+     friction.
 
 """
 
@@ -47,7 +51,9 @@ def handle_update(
     Main entry point for the --update flag.
     """
     try:
-        manifest_url = resolve_manifest_url(args.manifest_url, default_manifest_url)
+        manifest_url = resolve_manifest_url(
+            args.manifest_url, default_manifest_url
+        )
         manifest = fetch_manifest(manifest_url)
         manifest_version = manifest.get("version")
         if not isinstance(manifest_version, str):
@@ -59,8 +65,8 @@ def handle_update(
 
         if not getattr(sys, "frozen", False):
             raise UpdateError(
-                "The auto-update command only applies to the packaged executable. "
-                "Re-run once you are using pyrefine.exe."
+                "The auto-update command only applies to the packaged"
+                " executable. Re-run once you are using pyrefine.exe."
             )
 
         download_url, checksum = select_artifact(manifest)
@@ -78,7 +84,8 @@ def handle_update(
             print(notes.strip())
 
         print(
-            "Update applied. Please relaunch PyRefine after the helper finishes."
+            "Update applied. Please relaunch PyRefine after the"
+            " helper finishes."
         )
     except UpdateError as exc:
         print(f"[pyrefine] Update failed: {exc}", file=sys.stderr)
@@ -168,7 +175,9 @@ def download_release_binary(url: str, checksum: str) -> Path:
                     hasher.update(chunk)
                 temp_path = Path(temp_file.name)
     except urllib.error.URLError as exc:
-        raise UpdateError(f"Failed to download update artifact: {exc}") from exc
+        raise UpdateError(
+            f"Failed to download update artifact: {exc}"
+        ) from exc
 
     expected_algo, expected_digest = _normalise_checksum(checksum)
     if expected_algo != CHECKSUM_ALGORITHM:
@@ -204,7 +213,7 @@ def schedule_windows_replace(target: Path, staged_binary: Path) -> None:
         "    goto retry\r\n"
         ")\r\n"
         'move /Y "%SOURCE%" "%TARGET%" >nul 2>&1\r\n'
-        'if errorlevel 1 (\r\n'
+        "if errorlevel 1 (\r\n"
         "    timeout /T 1 /NOBREAK >nul\r\n"
         "    goto retry\r\n"
         ")\r\n"
@@ -223,7 +232,9 @@ def schedule_windows_replace(target: Path, staged_binary: Path) -> None:
     )
 
 
-def apply_update_binary(current_executable: Path, downloaded_path: Path) -> None:
+def apply_update_binary(
+    current_executable: Path, downloaded_path: Path
+) -> None:
     destination_dir = current_executable.parent
     destination_dir.mkdir(parents=True, exist_ok=True)
 

@@ -30,3 +30,7 @@ PyRefine is a lightweight toolkit that keeps Python repositories tidy. It can sc
 - `pyrefine --setup` – writes VS Code settings, installs recommended extensions, and provisions `.venv` plus `.uv-env`.
 - `pyrefine --test-coverage [path]` – runs pytest with coverage for the current project or a specified directory, saving reports under `pyrefine_artifacts/<project>/coverage`.
 - `pyrefine --update [--manifest-url URL]` – downloads and applies the latest packaged release (Windows exe replaces itself automatically).
+
+## 3. How PyRefine works (detailed)
+
+If you want the complete working details for developers and maintainers, see `docs/WORKING.md` which describes the architecture, each command's behavior, and implementation notes.

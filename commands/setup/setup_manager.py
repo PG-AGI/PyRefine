@@ -3,17 +3,21 @@ from __future__ import annotations
 
 """
 Module Purpose:
-    Handles the `--setup` command by provisioning VS Code settings plus pip and UV
-    environments tailored to a project’s requirements.
+    Handles the `--setup` command by provisioning VS Code settings plus pip
+     and UV environments tailored to a project’s requirements.
 
 Key Components:
-    - configure_vscode: Writes/merges `.vscode/settings.json` and extension recommendations.
-    - create_pip_environment / create_uv_environment: Ensure toolchains exist and install dependencies.
-    - run_setup: Coordinates editor configuration and environment provisioning using shared resources.
+    - configure_vscode: Writes/merges `.vscode/settings.json` and extension
+     recommendations.
+    - create_pip_environment / create_uv_environment: Ensure toolchains exist
+     and install dependencies.
+    - run_setup: Coordinates editor configuration and environment provisioning
+     using shared resources.
 
 Project Contribution:
-    Automates onboarding for developers so every project inherits the same editor tooling
-    and dual-environment strategy, reducing drift across machines.
+    Automates onboarding for developers so every project inherits the same
+     editor tooling and dual-environment strategy, reducing drift across
+     machines.
 
 """
 
@@ -31,14 +35,15 @@ UV_ENV_DIRNAME = ".uv-env"
 
 
 def _get_base_python() -> str:
-    """Get the actual Python interpreter, even when running as a frozen executable."""
+    """Get the actual Python interpreter, even when running as a frozen
+    executable."""
     if getattr(sys, "frozen", False):
         # Running as PyInstaller executable - find system Python
         python_exe = shutil.which("python") or shutil.which("python3")
         if not python_exe:
             raise RuntimeError(
-                "Cannot find Python interpreter. Please ensure Python is installed "
-                "and available in your PATH."
+                "Cannot find Python interpreter. Please ensure Python is"
+                "installed and available in your PATH."
             )
         return python_exe
     else:
@@ -101,6 +106,7 @@ def configure_vscode(project_root: Path, format_script: Path) -> None:
         print(f"[setup] Created {extensions_path}")
 
     ensure_pylance_extension()
+    ensure_flake8_extension()
 
 
 def ensure_pylance_extension() -> None:
@@ -113,6 +119,22 @@ def ensure_pylance_extension() -> None:
         print(
             "[setup] Unable to install Pylance automatically. "
             "Please install 'ms-python.vscode-pylance' manually."
+        )
+
+
+def ensure_flake8_extension() -> None:
+    """Ensure the flake8 extension is installed."""
+    flake8_extension_id = "ms-python.flake8"
+
+    if extension_installed(flake8_extension_id):
+        return
+
+    if install_vscode_extension(flake8_extension_id):
+        print("[setup] Installed flake8 extension via VS Code CLI.")
+    else:
+        print(
+            "[setup] Unable to install flake8 automatically. "
+            "Please install 'ms-python.flake8' manually."
         )
 
 
@@ -134,11 +156,30 @@ def install_vscode_extension(extension_id: str) -> bool:
     return False
 
 
+def extension_installed(extension_id: str) -> bool:
+    """Check if a VS Code extension is installed."""
+    for cmd in ("code", "code-insiders"):
+        exe = shutil.which(cmd)
+        if not exe:
+            continue
+        try:
+            result = subprocess.run(
+                [exe, "--list-extensions"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            if extension_id.lower() in result.stdout.lower():
+                return True
+        except subprocess.CalledProcessError:
+            continue
+    return False
+
+
 def create_pip_environment(project_root: Path) -> None:
     env_dir = project_root / PIP_ENV_DIRNAME
     if not env_dir.exists():
         print(f"[setup] Creating pip environment at {env_dir}")
-        # Use the base Python interpreter, not the frozen executable
         base_python = _get_base_python()
         subprocess.run([base_python, "-m", "venv", str(env_dir)], check=True)
     else:
@@ -160,8 +201,39 @@ def create_pip_environment(project_root: Path) -> None:
 def create_uv_environment(project_root: Path) -> None:
     uv_exec = shutil.which("uv")
     if not uv_exec:
-        print("[setup] 'uv' command not found. Skipping UV environment.")
-        return
+        pip_env_dir = project_root / PIP_ENV_DIRNAME
+        script_dir = "Scripts" if os.name == "nt" else "bin"
+        env_uv = (
+            pip_env_dir / script_dir / ("uv.exe" if os.name == "nt" else "uv")
+        )
+
+        if pip_env_dir.exists():
+            print(
+                "[setup] 'uv' command not found system-wide. "
+                "Attempting to install 'uv' into .venv using "
+                "the venv's pip."
+            )
+        else:
+            print(
+                "[setup] 'uv' command not found system-wide. "
+                "Creating pip environment and installing 'uv' into it."
+            )
+            create_pip_environment(project_root)
+
+        try:
+            pip_cmd = _pip_command(pip_env_dir)
+            subprocess.run(pip_cmd + ["install", "uv"], check=True)
+            if env_uv.exists():
+                uv_exec = str(env_uv)
+                print(
+                    f"[setup] Installed 'uv' into pip env; will use {uv_exec}."
+                )
+        except subprocess.CalledProcessError:
+            print(
+                "[setup] Failed to install 'uv' into .venv; "
+                "skipping UV environment creation."
+            )
+            return
 
     env_dir = project_root / UV_ENV_DIRNAME
     if not env_dir.exists():
@@ -189,7 +261,8 @@ def create_uv_environment(project_root: Path) -> None:
         )
     else:
         print(
-            "[setup] No requirements.txt found; skipping dependency installation."
+            "[setup] No requirements.txt found; skipping dependency "
+            "installation."
         )
 
 
@@ -198,4 +271,7 @@ def run_setup(project_root: Path, resource_root: Path) -> None:
     configure_vscode(project_root, format_script)
     create_pip_environment(project_root)
     create_uv_environment(project_root)
-    print("[setup] Completed VS Code configuration and pip/UV environment setup.")
+    print(
+        "[setup] Completed VS Code configuration and pip/UV environment"
+        " setup."
+    )
