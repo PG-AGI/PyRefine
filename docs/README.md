@@ -33,4 +33,4 @@ PyRefine is a lightweight toolkit that keeps Python repositories tidy. It can sc
 
 ## 3. How PyRefine works (detailed)
 
-If you want the complete working details for developers and maintainers, see `docs/WORKING.md` which describes the architecture, each command's behavior, and implementation notes.
+If you want the complete working details for developers and maintainers, see [docs/WORKING.md](./WORKING.md) which describes the architecture, each command's behavior, and implementation notes.
