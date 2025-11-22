@@ -4,17 +4,20 @@ from __future__ import annotations
 """
 Module Purpose:
     Acts as the primary CLI entry point that routes user flags to scaffolding,
-    cleaning, setup, coverage, and self-update workflows.
+     cleaning, setup, coverage, and self-update workflows.
 
 Key Components:
     - parse_args: Validates mutually exclusive flags and default behaviors.
-    - handle_create / handle_clean / handle_setup / handle_test_coverage / handle_update:
+    - handle_create / handle_clean / handle_setup / handle_test_coverage /
+     handle_update:
       Dispatchers that invoke the respective managers.
-    - main: Bootstraps the CLI by resolving arguments and calling the chosen handler.
+    - main: Bootstraps the CLI by resolving arguments and calling the chosen
+     handler.
 
 Project Contribution:
-    Provides the cohesive command surface for PyRefine so every automation task can
-    be triggered with consistent flags across platforms and packaging modes.
+    Provides the cohesive command surface for PyRefine so every automation
+     task can be triggered with consistent flags across platforms and packaging
+     modes.
 
 """
 
@@ -30,17 +33,27 @@ from commands.create import scaffold_manager
 from commands.setup import setup_manager
 from commands.test_coverage import coverage_runner
 from commands.update import update_manager
-from shared.gitignore_utils import GitignoreError, is_gitignored, load_gitignore_spec
+from shared.gitignore_utils import (
+    GitignoreError,
+    is_gitignored,
+    load_gitignore_spec,
+)
+
+APP_VERSION = "1.0"
 DEFAULT_MANIFEST_URL = os.environ.get(
     "PYREFINE_UPDATE_URL",
-    "https://raw.githubusercontent.com/PG-AGI/PyRefine/pyrefine.exe/release/manifest.json",
+    (
+        "https://raw.githubusercontent.com/PG-AGI/PyRefine/"
+        "pyrefine.exe/release/manifest.json"
+    ),
 )
 TEST_COVERAGE_ALL = "__PYREFINE_TEST_COVERAGE_ALL__"
 
 
 def _execution_project_root(project_root: Path) -> Path:
     """
-    When frozen as pyrefine.exe, treat the executable's directory as the project root.
+    When frozen as pyrefine.exe, treat the executable's directory as the
+     project root.
     """
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
@@ -88,7 +101,10 @@ def parse_args() -> argparse.Namespace:
         "--project-root",
         type=Path,
         default=Path.cwd(),
-        help=("Project root folder (defaults to the current working " "directory)."),
+        help=(
+            "Project root folder (defaults to the current working "
+            "directory)."
+        ),
     )
     parser.add_argument(
         "--create",
@@ -173,12 +189,16 @@ def handle_create(args: argparse.Namespace) -> None:
     project_root = args.project_root.resolve()
     scaffold_manager.ensure_scaffold(project_root, RESOURCE_ROOT)
     print("Scaffold complete.")
-    print("Run 'python PyRefine/cli/pyrefine.py --setup' to configure VS Code.")
+    print(
+        "Run 'python PyRefine/cli/pyrefine.py --setup' to configure VS Code."
+    )
 
 
 def handle_clean(args: argparse.Namespace) -> None:
     project_root = args.project_root.resolve()
-    clean_manager.run_clean(project_root, args.clean, FORMAT_SCRIPT, FLAKE8_TEMPLATE)
+    clean_manager.run_clean(
+        project_root, args.clean, FORMAT_SCRIPT, FLAKE8_TEMPLATE
+    )
 
 
 def handle_setup(args: argparse.Namespace) -> None:
@@ -201,16 +221,22 @@ def handle_test_coverage(args: argparse.Namespace) -> None:
         project_path = clean_manager.ensure_absolute(Path(target_arg), root)
 
     if not project_path.exists():
-        print(f"[pyrefine] Target '{project_path}' does not exist.", file=sys.stderr)
-        sys.exit(1)
-    if not project_path.is_dir():
-        print(f"[pyrefine] '{project_path}' is not a directory.", file=sys.stderr)
-        sys.exit(1)
-    if is_gitignored(project_path, root, gitignore_spec):
         print(
-            f"[pyrefine] '{project_path}' is ignored via .gitignore; skipping.",
+            f"[pyrefine] Target '{project_path}' does not exist.",
             file=sys.stderr,
         )
+        sys.exit(1)
+    if not project_path.is_dir():
+        print(
+            f"[pyrefine] '{project_path}' is not a directory.", file=sys.stderr
+        )
+        sys.exit(1)
+    if is_gitignored(project_path, root, gitignore_spec):
+        message = (
+            f"[pyrefine] '{project_path}' is ignored via .gitignore; "
+            "skipping."
+        )
+        print(message, file=sys.stderr)
         sys.exit(1)
 
     projects = [project_path]
@@ -222,7 +248,8 @@ def handle_test_coverage(args: argparse.Namespace) -> None:
         sys.exit(1)
     except subprocess.CalledProcessError as exc:
         print(
-            "[pyrefine] Coverage command failed " f"(exit code {exc.returncode}).",
+            "[pyrefine] Coverage command failed "
+            f"(exit code {exc.returncode}).",
             file=sys.stderr,
         )
         sys.exit(exc.returncode)
@@ -252,7 +279,9 @@ def main() -> None:
     elif args.update:
         handle_update(args)
     else:
-        raise AssertionError("Unreachable: at least one action must be specified.")
+        raise AssertionError(
+            "Unreachable: at least one action must be specified."
+        )
 
 
 if __name__ == "__main__":

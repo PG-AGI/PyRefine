@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
 Module Purpose:
-    Builds the PyRefine standalone executables via PyInstaller with consistent data assets.
+    Builds the PyRefine standalone executables via PyInstaller with consistent
+     data assets.
 
 Key Components:
     - main: Configures PyInstaller arguments and triggers the build process.
-    - add_data: Registers resource files so the bundled executable can locate templates.
+    - add_data: Registers resource files so the bundled executable can locate
+     templates.
 
 Project Contribution:
-    Enables shipping PyRefine as platform-specific binaries, ensuring users can run the
-    automation toolkit without installing Python or managing source layouts manually.
+    Enables shipping PyRefine as platform-specific binaries, ensuring users
+     can run the automation toolkit without installing Python or managing
+     source layouts manually.
 
 """
 from __future__ import annotations

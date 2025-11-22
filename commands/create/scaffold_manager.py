@@ -3,21 +3,22 @@ from __future__ import annotations
 
 """
 Module Purpose:
-    Generates the canonical PyRefine project layout, template files, and supporting
-    configuration assets used by the `--create` workflow.
+    Generates the canonical PyRefine project layout, template files, and
+     supporting configuration assets used by the `--create` workflow.
 
 Key Components:
     - ensure_scaffold: Creates directories/files and reports what was added.
     - ensure_flake8: Copies or synthesizes the shared Flake8 configuration.
-    - _ensure_directories / _ensure_template_files: Internal helpers that materialize folders and templates.
+    - _ensure_directories / _ensure_template_files: Internal helpers that
+     materialize folders and templates.
 
 Project Contribution:
-    Gives teams a consistent starting point (FastAPI app, tests, Dockerfile, configs)
-    so PyRefine can immediately apply formatting, setup, and coverage automation.
+    Gives teams a consistent starting point (FastAPI app, tests, Dockerfile,
+     configs) so PyRefine can immediately apply formatting, setup, and coverage
+     automation.
 
 """
 
-import os
 import shutil
 from pathlib import Path
 from textwrap import dedent
@@ -220,7 +221,8 @@ def ensure_scaffold(project_root: Path, resource_root: Path) -> None:
         created_extra.append(".flake8")
     if created_dirs:
         print(
-            f"[scaffold] Ensured directories: {', '.join(sorted(created_dirs))}"
+            "[scaffold] Ensured directories: "
+            f"{', '.join(sorted(created_dirs))}"
         )
     if created_files or created_extra:
         combined = created_files + created_extra

@@ -3,17 +3,21 @@ from __future__ import annotations
 
 """
 Module Purpose:
-    Orchestrates the `--clean` workflow by pruning cache directories and invoking
-    the formatter pipeline with strict .gitignore awareness.
+    Orchestrates the `--clean` workflow by pruning cache directories and
+     invoking the formatter pipeline with strict .gitignore awareness.
 
 Key Components:
-    - run_clean: Entry point that parses the target argument and loads .gitignore rules.
-    - clean_target: Validates targets, removes clutter, and routes formatting jobs.
-    - run_formatter: Executes `format.py` either via runpy (frozen) or a Python subprocess.
+    - run_clean: Entry point that parses the target argument and loads
+     .gitignore rules.
+    - clean_target: Validates targets, removes clutter, and routes for
+       formatting jobs.
+    - run_formatter: Executes `format.py` either via runpy (frozen) or a
+     Python subprocess.
 
 Project Contribution:
-    Keeps repositories tidy and consistent so PyRefine’s automation commands always operate
-    on clean, linted code that respects each project’s ignore policies.
+    Keeps repositories tidy and consistent so PyRefine’s automation commands
+     always operate
+     on clean, linted code that respects each project’s ignore policies.
 
 """
 
