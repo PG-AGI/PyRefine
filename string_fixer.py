@@ -1,34 +1,149 @@
 import io
+import logging
 import textwrap
 import tokenize
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 MAX_LINE_LENGTH = 79
 
+# Configure logging
+logger = logging.getLogger(__name__)
 
-def fix_file(path: Path) -> None:
-    """Reads a file, fixes string lengths, and writes it back."""
+
+@dataclass
+class FixStats:
+    """Statistics about string fixing operations."""
+
+    files_processed: int = 0
+    files_modified: int = 0
+    strings_fixed: int = 0
+    lines_reduced: int = 0
+    errors: List[str] = None
+
+    def __post_init__(self):
+        if self.errors is None:
+            self.errors = []
+
+    def add_error(self, error: str):
+        """Add an error message to the stats."""
+        self.errors.append(error)
+
+    def __str__(self) -> str:
+        """Return a formatted string representation of stats."""
+        output = []
+        output.append(f"Files processed: {self.files_processed}")
+        output.append(f"Files modified: {self.files_modified}")
+        output.append(f"Strings fixed: {self.strings_fixed}")
+        output.append(f"Lines reduced: {self.lines_reduced}")
+        if self.errors:
+            output.append(f"Errors encountered: {len(self.errors)}")
+            for error in self.errors[:5]:  # Show first 5 errors
+                output.append(f"  - {error}")
+        return "\n".join(output)
+
+
+def fix_file(path: Path, stats: Optional[FixStats] = None) -> bool:
+    """Reads a file, fixes string lengths, and writes it back.
+
+    Args:
+        path: Path to the file to fix
+        stats: Optional FixStats object to track statistics
+
+    Returns:
+        True if file was modified, False otherwise
+    """
+    if stats:
+        stats.files_processed += 1
+
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            content = f.read()
+        # Check if file exists
+        if not path.exists():
+            error_msg = f"File not found: {path}"
+            logger.error(error_msg)
+            if stats:
+                stats.add_error(error_msg)
+            return False
 
-        fixed_content = fix_content(content)
+        # Check if file is binary
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except UnicodeDecodeError:
+            error_msg = f"Cannot process binary file: {path}"
+            logger.warning(error_msg)
+            if stats:
+                stats.add_error(error_msg)
+            return False
+
+        # Check if file is empty
+        if not content.strip():
+            logger.debug(f"Skipping empty file: {path}")
+            return False
+
+        original_line_count = len(content.splitlines())
+        fixed_content = fix_content(content, stats=stats)
 
         if content != fixed_content:
+            new_line_count = len(fixed_content.splitlines())
+
+            # Create backup
+            backup_path = path.with_suffix(path.suffix + ".bak")
+            try:
+                with open(backup_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                logger.debug(f"Created backup: {backup_path}")
+            except Exception as e:
+                logger.warning(f"Could not create backup: {e}")
+
+            # Write fixed content
             with open(path, "w", encoding="utf-8") as f:
                 f.write(fixed_content)
+
+            if stats:
+                stats.files_modified += 1
+                stats.lines_reduced += new_line_count - original_line_count
+
+            logger.info(f"Fixed strings in {path}")
+            return True
+
+        logger.debug(f"No changes needed for {path}")
+        return False
+
+    except PermissionError as e:
+        error_msg = f"Permission denied: {path} - {e}"
+        logger.error(error_msg)
+        if stats:
+            stats.add_error(error_msg)
+        return False
     except Exception as e:
-        print(f"Failed to fix strings in {path}: {e}")
+        error_msg = f"Failed to fix strings in {path}: {e}"
+        logger.error(error_msg)
+        if stats:
+            stats.add_error(error_msg)
+        return False
 
 
-def fix_content(content: str) -> str:
-    """Parses content and splits long strings."""
+def fix_content(content: str, stats: Optional[FixStats] = None) -> str:
+    """Parses content and splits long strings.
+
+    Args:
+        content: The content to fix
+        stats: Optional FixStats object to track statistics
+
+    Returns:
+        Fixed content with split strings
+    """
     try:
         tokens = list(
             tokenize.tokenize(io.BytesIO(content.encode("utf-8")).readline)
         )
-    except tokenize.TokenError:
+    except tokenize.TokenError as e:
+        logger.debug(f"Tokenize error: {e}")
+        return content
+    except Exception as e:
+        logger.warning(f"Unexpected error during tokenization: {e}")
         return content
 
     # Identify ranges to replace and replace them from bottom to top.
@@ -61,6 +176,8 @@ def fix_content(content: str) -> str:
                                 new_string,
                             )
                         )
+                        if stats:
+                            stats.strings_fixed += 1
             i += 1
 
         elif token.type == getattr(tokenize, "FSTRING_START", -1):
@@ -97,6 +214,8 @@ def fix_content(content: str) -> str:
                                 new_string,
                             )
                         )
+                        if stats:
+                            stats.strings_fixed += 1
 
             i = j  # Skip processed tokens
         else:
@@ -179,7 +298,7 @@ def split_normal_string(text: str, indent_col: int) -> str:
 
         chunk = current[: break_point + 1]
         chunks.append(chunk)
-        current = current[break_point + 1:]
+        current = current[break_point + 1 :]
 
         available = MAX_LINE_LENGTH - indent_col - len(prefix) - 1
         if available < 10:
@@ -233,7 +352,7 @@ def split_f_string(text: str, indent_col: int) -> str:
 
         chunk = current[: break_point + 1]
         chunks.append(chunk)
-        current = current[break_point + 1:]
+        current = current[break_point + 1 :]
         available = MAX_LINE_LENGTH - indent_col - len(prefix) - 1
 
     chunks.append(current)
