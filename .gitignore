@@ -17,9 +17,10 @@ venv/
 ENV/
 .venv/
 PyRefine_env/
-manifests/
-.env
 .uv-env/
+
+# Project/test artifacts
+manifests/
 pyrefine_artifacts/
 unit_tests/
 integration_tests/
@@ -32,7 +33,7 @@ dist/
 .eggs/
 
 # IDE/editor-specific files
-# .vscode/
+.vscode/
 .idea/
 *.swp
 *.swo
@@ -54,7 +55,9 @@ ehthumbs.db
 nosetests.xml
 coverage.xml
 *.cover
-*.hypothesis/
+.hypothesis/
+.pytest_cache/
+.cache/
 
 # Jupyter Notebook
 .ipynb_checkpoints/
@@ -65,9 +68,6 @@ instance/
 
 # PyCharm
 .idea/
-
-# Pytest
-.cache/
 
 # Django
 *.log
@@ -81,3 +81,9 @@ media/
 # System files
 *.bak
 *.tmp
+
+# Custom project ignores
+release/
+STRING_FIXER_SUMMARY.md
+STRING_FIXER_QUICKSTART.md
+STRING_FIXER.md

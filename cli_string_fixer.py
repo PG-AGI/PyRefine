@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Command-line interface for string_fixer module.
+cli_string_fixer.py
+-------------------
+Command-line interface for the string_fixer module.
+Provides options to fix long strings and comments in Python files or directories.
 
 Usage:
     python cli_string_fixer.py <file_or_directory> [options]

@@ -138,7 +138,7 @@ def collect_targets(paths: Iterable[Path]) -> list[Path]:
 
 def chunked_targets(targets: list[Path], chunk_size: int = FORMAT_BATCH_SIZE):
     for index in range(0, len(targets), chunk_size):
-        yield targets[index: index + chunk_size]
+        yield targets[index : index + chunk_size]
 
 
 def parse_args() -> argparse.Namespace:
@@ -313,6 +313,36 @@ def run_flake8(targets: list[Path]) -> None:
         run_subprocess([executable, *map(str, batch)])
 
 
+def run_string_fixer(targets: list[Path]) -> None:
+    try:
+        from string_fixer import FixStats, fix_file
+    except ImportError as exc:
+        print(
+            f"[string-fixer] Unable to import string_fixer: {exc}",
+            file=sys.stderr,
+        )
+        return
+
+    stats = FixStats()
+    for file_path in targets:
+        fix_file(file_path, stats=stats, create_backup=False)
+
+    if stats.strings_fixed > 0:
+        print(
+            f"[string-fixer] Fixed {stats.strings_fixed} long strings in {stats.files_modified} file(s)"
+        )
+    else:
+        print("[string-fixer] No long strings found to fix.")
+    if stats.errors:
+        print(
+            f"[string-fixer] Encountered {len(stats.errors)} issue(s):"
+        )
+        for error in stats.errors[:3]:
+            print(f"    - {error}")
+        if len(stats.errors) > 3:
+            print("    - ...")
+
+
 def deduplicate_paths(paths: Iterable[Path]) -> list[Path]:
     seen: set[Path] = set()
     unique: list[Path] = []
@@ -344,6 +374,12 @@ def main() -> None:
     if not targets:
         print("[format] No Python files found to process.")
         return
+
+    # Step 0: Run string fixer before all other formatters
+    try:
+        run_string_fixer(targets)
+    except Exception as error:
+        print(f"[string-fixer] Error: {error}", file=sys.stderr)
 
     try:
         if not args.lint_only:

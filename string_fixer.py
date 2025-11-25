@@ -1,8 +1,15 @@
+"""
+string_fixer.py
+--------------
+Core logic for fixing long strings and comments in Python source files.
+Provides file-level and content-level APIs for integration and CLI use.
+"""
+
 import io
 import logging
+import re
 import textwrap
 import tokenize
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -290,6 +297,16 @@ def _split_literal(text: str) -> Tuple[str, str, str]:
 def split_string_token(
     token: tokenize.TokenInfo, line_content: str, start_col: int
 ) -> str:
+    """Split a string token into smaller parts if it's too long.
+
+    Args:
+        token: The original token to split
+        line_content: The full line content where the token is found
+        start_col: The starting column of the token in the line
+
+    Returns:
+        A string that is the result of splitting the token
+    """
     text = token.string
     prefix, quote, body = _split_literal(text)
 
@@ -306,6 +323,16 @@ def split_string_token(
 
 
 def split_normal_string(text: str, indent_col: int) -> str:
+    """Split a normal string (not f-string or docstring) into smaller parts.
+
+    Args:
+        text: The original string to split
+        indent_col: The column number where the string starts (for indentation)
+
+    Returns:
+        A string that is the result of splitting the original string into smaller
+        parts, each fitting within the maximum line length.
+    """
     prefix, quote, content = _split_literal(text)
 
     available = MAX_LINE_LENGTH - indent_col - len(prefix) - len(quote)
@@ -371,6 +398,16 @@ def split_normal_string(text: str, indent_col: int) -> str:
 
 
 def split_f_string(text: str, indent_col: int) -> str:
+    """Split an f-string (formatted string literal) into smaller parts.
+
+    Args:
+        text: The original f-string to split
+        indent_col: The column number where the f-string starts (for indentation)
+
+    Returns:
+        A string that is the result of splitting the original f-string into smaller
+        parts, each fitting within the maximum line length.
+    """
     prefix, quote, content = _split_literal(text)
     available = MAX_LINE_LENGTH - indent_col - len(prefix) - len(quote)
 
@@ -416,6 +453,15 @@ def split_f_string(text: str, indent_col: int) -> str:
 
 
 def wrap_docstring(text: str, indent_col: int) -> str:
+    """Wrap a docstring (triple-quoted string) to fit within the maximum line length.
+
+    Args:
+        text: The original docstring to wrap
+        indent_col: The column number where the docstring starts (for indentation)
+
+    Returns:
+        A wrapped docstring that fits within the maximum line length.
+    """
     # support prefixes like r"""..."""
     prefix, quote, content = _split_literal(text)
     if len(quote) != 3:
@@ -439,7 +485,16 @@ def wrap_docstring(text: str, indent_col: int) -> str:
 
 
 def wrap_comment(comment: str, indent_col: int) -> str:
-    """Wraps a long comment into multiple lines, preserving indentation."""
+    """Wraps a long comment into multiple lines, preserving indentation.
+
+    Args:
+        comment: The original comment to wrap
+        indent_col: The column number where the comment starts (for indentation)
+
+    Returns:
+        A wrapped comment that is broken into multiple lines, each fitting within
+        the maximum line length.
+    """
     prefix = "# "
     # Remove exactly one leading '#' (and one optional space), keep the rest
     if comment.startswith("#"):
