@@ -11,22 +11,23 @@ Tests cover:
 """
 
 import sys
-from pathlib import Path
 import tempfile
 import textwrap
+from pathlib import Path
+
 import pytest
 
 # Add parent directory to path to import string_fixer
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from string_fixer import (
+    MAX_LINE_LENGTH,
     fix_content,
     fix_file,
-    split_normal_string,
     split_f_string,
-    wrap_docstring,
+    split_normal_string,
     split_string_token,
-    MAX_LINE_LENGTH,
+    wrap_docstring,
 )
 
 
@@ -45,7 +46,7 @@ class TestNormalStrings:
         long_text = "This is a very long string " * 10
         content = f'message = "{long_text}"'
         result = fix_content(content)
-        
+
         # Result should be different and contain continuation
         assert result != content
         assert "\\" in result or len(result.splitlines()) > 1
@@ -54,7 +55,7 @@ class TestNormalStrings:
         """String should split at word boundaries when possible."""
         content = 'x = "' + "word " * 50 + '"'
         result = fix_content(content)
-        
+
         # Should split and not break words
         assert "\\" in result
 
@@ -87,7 +88,7 @@ class TestRawStrings:
         long_path = r"C:\Users\VeryLongUsername\Documents\Projects\Subfolder\AnotherFolder\YetAnotherFolder\Files\Data"
         content = f'path = r"{long_path}"'
         result = fix_content(content)
-        
+
         # Should be split
         assert result != content or len(content) <= MAX_LINE_LENGTH
 
@@ -95,7 +96,7 @@ class TestRawStrings:
         """Raw strings should preserve backslashes correctly."""
         content = r'regex = r"\d+\.\d+\.\d+\.\d+ is a pattern that matches IP addresses and more text to make it long"'
         result = fix_content(content)
-        
+
         # Should still contain backslashes
         assert "\\" in result
 
@@ -114,7 +115,7 @@ class TestFStrings:
         vars_part = "{var1} {var2} {var3} {var4}" * 5
         content = f'msg = f"Long message with {vars_part}"'
         result = fix_content(content)
-        
+
         # Should attempt to split
         assert result != content or len(content) <= MAX_LINE_LENGTH
 
@@ -122,15 +123,20 @@ class TestFStrings:
         """F-string expressions should not be broken."""
         content = 'msg = f"Result: {calculate_something(x, y, z)} and more text to make this line exceed the maximum allowed line length"'
         result = fix_content(content)
-        
+
         # Should contain the expression intact
-        assert "{calculate_something(x, y, z)}" in result or "calculate_something" in result
+        assert (
+            "{calculate_something(x, y, z)}" in result
+            or "calculate_something" in result
+        )
 
     def test_fstring_with_nested_braces(self):
         """F-strings with nested braces should be handled carefully."""
-        content = 'msg = f"Dict: {data["key"]} with more content ' + "x" * 50 + '"'
+        content = (
+            'msg = f"Dict: {data["key"]} with more content ' + "x" * 50 + '"'
+        )
         result = fix_content(content)
-        
+
         # Should not break the nested braces
         assert "data[" in result or "data" in result
 
@@ -149,7 +155,7 @@ class TestDocstrings:
         long_text = "This is a very long docstring that exceeds the maximum line length and should be wrapped appropriately to maintain PEP 8 compliance."
         content = f'"""{long_text}"""'
         result = fix_content(content)
-        
+
         # Should be different
         assert result != content or len(content) <= MAX_LINE_LENGTH
 
@@ -157,7 +163,7 @@ class TestDocstrings:
         """Docstrings should maintain triple quotes."""
         content = '"""' + "Long " * 30 + '"""'
         result = fix_content(content)
-        
+
         # Should still have triple quotes
         assert '"""' in result
 
@@ -175,15 +181,19 @@ class TestEdgeCases:
         """Strings with escape sequences should be preserved."""
         content = r'msg = "Line 1\nLine 2\nLine 3\t\tTabbed and this needs to be much longer to trigger splitting behavior"'
         result = fix_content(content)
-        
+
         # Escape sequences should remain
         assert "\\n" in result or "\\t" in result
 
     def test_multiple_strings_in_one_line(self):
         """Multiple strings on the same line should be handled."""
-        content = 'a = "First very long string ' + "x" * 50 + '"; b = "Second string"'
+        content = (
+            'a = "First very long string '
+            + "x" * 50
+            + '"; b = "Second string"'
+        )
         result = fix_content(content)
-        
+
         # Should process both strings
         assert len(result) >= len(content)
 
@@ -191,7 +201,7 @@ class TestEdgeCases:
         """Strings with deep indentation should be handled."""
         content = '            msg = "' + "A" * 70 + '"'
         result = fix_content(content)
-        
+
         # Should handle indentation
         assert result != content or len(content) <= MAX_LINE_LENGTH
 
@@ -203,7 +213,7 @@ class TestEdgeCases:
 
     def test_syntax_error_content(self):
         """Content with syntax errors should be returned unchanged."""
-        content = 'this is not ( valid python syntax'
+        content = "this is not ( valid python syntax"
         result = fix_content(content)
         # Should return original content on tokenize error
         assert result == content
@@ -214,7 +224,9 @@ class TestFileOperations:
 
     def test_fix_file_creates_backup(self):
         """Test that fix_file modifies file when needed."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False, encoding='utf-8') as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".py", delete=False, encoding="utf-8"
+        ) as f:
             long_line = 'message = "' + "x" * 100 + '"'
             f.write(long_line)
             temp_path = Path(f.name)
@@ -222,11 +234,11 @@ class TestFileOperations:
         try:
             # Fix the file
             fix_file(temp_path)
-            
+
             # Read the result
-            with open(temp_path, 'r', encoding='utf-8') as f:
+            with open(temp_path, "r", encoding="utf-8") as f:
                 result = f.read()
-            
+
             # Should be modified
             assert result != long_line
             assert "\\" in result or len(result.splitlines()) > 1
@@ -235,20 +247,22 @@ class TestFileOperations:
 
     def test_fix_file_handles_unchanged_content(self):
         """Test that fix_file doesn't rewrite unchanged files."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False, encoding='utf-8') as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".py", delete=False, encoding="utf-8"
+        ) as f:
             short_content = 'message = "short"'
             f.write(short_content)
             temp_path = Path(f.name)
 
         try:
             # Get original modification time
-            original_content = temp_path.read_text(encoding='utf-8')
-            
+            original_content = temp_path.read_text(encoding="utf-8")
+
             # Fix the file
             fix_file(temp_path)
-            
+
             # Content should be the same
-            new_content = temp_path.read_text(encoding='utf-8')
+            new_content = temp_path.read_text(encoding="utf-8")
             assert new_content == original_content
         finally:
             temp_path.unlink()
@@ -268,7 +282,7 @@ class TestSplitFunctions:
         long_text = "This is a test string " * 10
         input_str = f'"{long_text}"'
         result = split_normal_string(input_str, indent_col=4)
-        
+
         # Should contain continuation
         assert "\\" in result or len(result) <= MAX_LINE_LENGTH
 
@@ -277,7 +291,7 @@ class TestSplitFunctions:
         long_text = "Value is {x} and more text " * 5
         input_str = f'f"{long_text}"'
         result = split_f_string(input_str, indent_col=4)
-        
+
         # Should handle the split
         assert isinstance(result, str)
 
@@ -286,7 +300,7 @@ class TestSplitFunctions:
         long_doc = "This is a very long documentation string " * 10
         input_str = f'"""{long_doc}"""'
         result = wrap_docstring(input_str, indent_col=4)
-        
+
         # Should wrap
         assert isinstance(result, str)
         assert '"""' in result
@@ -297,17 +311,21 @@ class TestRealWorldExamples:
 
     def test_log_message(self):
         """Test typical logging message."""
-        content = textwrap.dedent('''
+        content = textwrap.dedent(
+            """
             logger.info("Processing user request with ID {user_id} and performing complex operation that takes a long time")
-        ''').strip()
+        """
+        ).strip()
         result = fix_content(content)
         assert isinstance(result, str)
 
     def test_sql_query(self):
         """Test SQL query string."""
-        content = textwrap.dedent('''
+        content = textwrap.dedent(
+            """
             query = "SELECT * FROM users WHERE username = 'test' AND email = 'test@example.com' AND status = 'active' AND created_at > '2024-01-01'"
-        ''').strip()
+        """
+        ).strip()
         result = fix_content(content)
         assert isinstance(result, str)
 
@@ -319,11 +337,13 @@ class TestRealWorldExamples:
 
     def test_function_with_docstring(self):
         """Test function with long docstring."""
-        content = textwrap.dedent('''
+        content = textwrap.dedent(
+            '''
             def example_function():
                 """This is a very long docstring that describes the function in great detail and provides comprehensive information about parameters return values and usage examples."""
                 pass
-        ''')
+        '''
+        )
         result = fix_content(content)
         assert isinstance(result, str)
         assert "def example_function" in result
@@ -340,30 +360,96 @@ class TestIntegration:
 
     def test_multiple_long_strings_in_file(self):
         """Test file with multiple long strings."""
-        content = textwrap.dedent('''
+        content = textwrap.dedent(
+            """
             # Multiple long strings
             msg1 = "This is the first very long message that exceeds the maximum line length and should be split appropriately"
             msg2 = "This is the second very long message that also exceeds the maximum line length and needs splitting"
             msg3 = "Short"
             msg4 = f"This is an f-string with {variable} that is also very long and exceeds the maximum allowed line length"
-        ''')
+        """
+        )
         result = fix_content(content)
-        
+
         # Should process all long strings
         assert result != content
         lines = result.splitlines()
-        assert len([l for l in lines if len(l) > MAX_LINE_LENGTH]) < content.count('msg')
+        assert len(
+            [l for l in lines if len(l) > MAX_LINE_LENGTH]
+        ) < content.count("msg")
 
     def test_mixed_string_types(self):
         """Test file with mixed string types."""
-        content = textwrap.dedent('''
+        content = textwrap.dedent(
+            '''
             normal = "Normal long string " + "that continues " * 20
             raw = r"C:\\Users\\Path\\That\\Is\\Very\\Long\\And\\Contains\\Many\\Directories\\And\\Subdirectories"
             fstring = f"Format {var1} and {var2} with lots of additional text to make this exceed the line length limit"
             docstring = """This is a docstring that provides detailed documentation about functionality"""
-        ''')
+        '''
+        )
         result = fix_content(content)
         assert isinstance(result, str)
+
+
+class TestComments:
+    """Test handling of long comments."""
+
+    def test_short_comment_unchanged(self):
+        """Short comments should not be modified."""
+        content = "# This is a short comment"
+        result = fix_content(content)
+        assert result == content
+
+    def test_long_comment_gets_wrapped(self):
+        """Long comments exceeding MAX_LINE_LENGTH should be wrapped."""
+        long_comment = (
+            "# "
+            + "This is a very long comment that exceeds the maximum line length and should be wrapped appropriately to maintain readability. "
+            * 2k
+        )
+        result = fix_content(long_comment)
+
+        # Result should be different and contain wrapped lines
+        assert result != long_comment
+        assert len(result.splitlines()) > 1
+
+    def test_comment_with_indentation(self):
+        """Indented comments should preserve indentation when wrapped."""
+        content = (
+            "    # "
+            + "This is a very long indented comment that exceeds the maximum line length and should be wrapped appropriately. "
+            * 2
+        )
+        result = fix_content(content)
+
+        # Result should preserve indentation
+        assert result != content
+        assert result.startswith("    #")
+        assert len(result.splitlines()) > 1
+
+    def test_multiple_comments(self):
+        """Multiple comments in a file should all be processed."""
+        content = """
+        # This is a short comment
+        # This is a very long comment that exceeds the maximum line length and should be wrapped appropriately to maintain readability.
+        # Another short comment
+        """
+        result = fix_content(content)
+
+        # Only the long comment should be wrapped
+        assert result != content
+        assert result.count("#") == content.count("#")
+        assert (
+            len(
+                [
+                    line
+                    for line in result.splitlines()
+                    if len(line) > MAX_LINE_LENGTH
+                ]
+            )
+            == 1
+        )
 
 
 if __name__ == "__main__":

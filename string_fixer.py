@@ -2,6 +2,7 @@ import io
 import logging
 import textwrap
 import tokenize
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -44,12 +45,18 @@ class FixStats:
         return "\n".join(output)
 
 
-def fix_file(path: Path, stats: Optional[FixStats] = None) -> bool:
+def fix_file(
+    path: Path,
+    stats: Optional[FixStats] = None,
+    *,
+    create_backup: bool = True,
+) -> bool:
     """Reads a file, fixes string lengths, and writes it back.
 
     Args:
         path: Path to the file to fix
         stats: Optional FixStats object to track statistics
+        create_backup: whether to create .bak before writing
 
     Returns:
         True if file was modified, False otherwise
@@ -89,13 +96,14 @@ def fix_file(path: Path, stats: Optional[FixStats] = None) -> bool:
             new_line_count = len(fixed_content.splitlines())
 
             # Create backup
-            backup_path = path.with_suffix(path.suffix + ".bak")
-            try:
-                with open(backup_path, "w", encoding="utf-8") as f:
-                    f.write(content)
-                logger.debug(f"Created backup: {backup_path}")
-            except Exception as e:
-                logger.warning(f"Could not create backup: {e}")
+            if create_backup:
+                backup_path = path.with_suffix(path.suffix + ".bak")
+                try:
+                    with open(backup_path, "w", encoding="utf-8") as f:
+                        f.write(content)
+                    logger.debug(f"Created backup: {backup_path}")
+                except Exception as e:
+                    logger.warning(f"Could not create backup: {e}")
 
             # Write fixed content
             with open(path, "w", encoding="utf-8") as f:
@@ -103,7 +111,8 @@ def fix_file(path: Path, stats: Optional[FixStats] = None) -> bool:
 
             if stats:
                 stats.files_modified += 1
-                stats.lines_reduced += new_line_count - original_line_count
+                # positive number means we reduced lines
+                stats.lines_reduced += original_line_count - new_line_count
 
             logger.info(f"Fixed strings in {path}")
             return True
@@ -126,15 +135,7 @@ def fix_file(path: Path, stats: Optional[FixStats] = None) -> bool:
 
 
 def fix_content(content: str, stats: Optional[FixStats] = None) -> str:
-    """Parses content and splits long strings.
-
-    Args:
-        content: The content to fix
-        stats: Optional FixStats object to track statistics
-
-    Returns:
-        Fixed content with split strings
-    """
+    """Parses content and splits long strings and comments."""
     try:
         tokens = list(
             tokenize.tokenize(io.BytesIO(content.encode("utf-8")).readline)
@@ -147,7 +148,8 @@ def fix_content(content: str, stats: Optional[FixStats] = None) -> str:
         return content
 
     # Identify ranges to replace and replace them from bottom to top.
-    replacements: List[Tuple[int, int, str]] = []
+    # (start_line, start_col, end_line, end_col, new_text)
+    replacements: List[Tuple[int, int, int, int, str]] = []
 
     i = 0
     while i < len(tokens):
@@ -218,6 +220,28 @@ def fix_content(content: str, stats: Optional[FixStats] = None) -> str:
                             stats.strings_fixed += 1
 
             i = j  # Skip processed tokens
+
+        elif token.type == tokenize.COMMENT:
+            start_line, start_col = token.start
+            comment_val = token.string
+
+            # consider indentation in visual length
+            if start_col + len(comment_val) > MAX_LINE_LENGTH:
+                new_comment = wrap_comment(comment_val, start_col)
+                if new_comment != comment_val:
+                    replacements.append(
+                        (
+                            start_line,
+                            start_col,
+                            start_line,
+                            start_col + len(comment_val),
+                            new_comment,
+                        )
+                    )
+                    if stats:
+                        stats.strings_fixed += 1
+
+            i += 1
         else:
             i += 1
 
@@ -236,126 +260,104 @@ def fix_content(content: str, stats: Optional[FixStats] = None) -> str:
     return "".join(lines)
 
 
+# ---------- String literal helpers/splitters ----------
+
+_STRING_PREFIX_RE = re.compile(r'(?i)^([rubf]{1,3})?([\'"]{3}|[\'"])')
+
+
+def _split_literal(text: str) -> Tuple[str, str, str]:
+    # """
+    # Returns (prefix, quote, body) for a Python string literal like:
+    #   r"abc", fr'xyz', """doc""", r'''doc''', "plain"
+    # prefix: e.g., 'r', 'f', 'fr', '', 'b', 'rf'
+    # quote: one of: '"', "'", '"""', "'''"
+    # body: inner content (without the closing quote)
+    # """
+    m = _STRING_PREFIX_RE.match(text)
+    if not m:
+        # Fallback: treat whole as body
+        return "", "", text
+    prefix = m.group(1) or ""
+    quote = m.group(2)
+    # find the matching closing quote from the end
+    end = text.rfind(quote)
+    if end == -1:
+        end = len(text)
+    body = text[m.end() : end]
+    return prefix, quote, body
+
+
 def split_string_token(
     token: tokenize.TokenInfo, line_content: str, start_col: int
 ) -> str:
-    string_val = token.string
+    text = token.string
+    prefix, quote, body = _split_literal(text)
 
-    if string_val.startswith('"""') or string_val.startswith("'''"):
-        return wrap_docstring(string_val, start_col)
-    elif string_val.startswith('"') or string_val.startswith("'"):
-        return split_normal_string(string_val, start_col)
-    elif string_val.lower().startswith('f"') or string_val.lower().startswith(
-        "f'"
-    ):
-        return split_f_string(string_val, start_col)
-    elif string_val.lower().startswith('r"') or string_val.lower().startswith(
-        "r'"
-    ):
-        return split_normal_string(string_val, start_col)
+    # Triple-quoted (incl. with prefixes like r/f/rf) -> treat as docstring-like
+    if len(quote) == 3:
+        return wrap_docstring(text, start_col)
 
-    return string_val
+    # f-strings (including rf, fr)
+    if "f" in prefix.lower():
+        return split_f_string(text, start_col)
+
+    # Everything else (r, b, u, rb, br, or plain)
+    return split_normal_string(text, start_col)
 
 
 def split_normal_string(text: str, indent_col: int) -> str:
-    if text.startswith("r") or text.startswith("R"):
-        prefix = text[:2]
-        quote = text[1]
-        content = text[2:-1]
-    else:
-        prefix = text[0]
-        quote = text[0]
-        content = text[1:-1]
+    prefix, quote, content = _split_literal(text)
 
-    available = MAX_LINE_LENGTH - indent_col - len(prefix) - 1
-
+    available = MAX_LINE_LENGTH - indent_col - len(prefix) - len(quote)
     if available <= 0:
         available = 40
 
-    chunks = []
+    chunks: List[str] = []
     current = content
 
     while len(current) > available:
         break_point = current.rfind(" ", 0, available)
         if break_point == -1:
-            break_point = available - 1
+            break_point = max(0, available - 1)
 
-        # Ensure we don't split at a backslash that would escape the quote
-        while break_point > 0 and current[break_point] == "\\":
-            bs_count = 0
-            idx = break_point
-            while idx >= 0 and current[idx] == "\\":
-                bs_count += 1
-                idx -= 1
-
-            if bs_count % 2 == 1:
-                break_point -= 1
+        # Ensure we don't end chunk with an odd number of backslashes
+        bp = break_point
+        while bp > 0 and current[bp] == "\\":
+            # count trailing backslashes up to bp
+            k = bp
+            bs = 0
+            while k >= 0 and current[k] == "\\":
+                bs += 1
+                k -= 1
+            if bs % 2 == 1:
+                bp -= 1
             else:
                 break
-
-        if break_point < 0:
-            break_point = available - 1
+        break_point = max(0, bp)
 
         chunk = current[: break_point + 1]
-        chunks.append(chunk)
-        current = current[break_point + 1 :]
 
-        available = MAX_LINE_LENGTH - indent_col - len(prefix) - 1
+        # raw strings cannot end with a single backslash
+        if "r" in prefix.lower() and chunk.endswith("\\"):
+            if len(current) > break_point + 1:
+                chunk += current[break_point + 1]
+                current = current[break_point + 2 :]
+            else:
+                # can't fix safely; stop splitting
+                chunks.append(current)
+                current = ""
+                break
+        else:
+            current = current[break_point + 1 :]
+
+        chunks.append(chunk)
+
+        available = MAX_LINE_LENGTH - indent_col - len(prefix) - len(quote)
         if available < 10:
             available = 50
 
-    chunks.append(current)
-
-    result = ""
-    for i, chunk in enumerate(chunks):
-        if i > 0:
-            result += " \\\n" + " " * indent_col
-        result += f"{prefix}{chunk}{quote}"
-
-    return result
-
-
-def split_f_string(text: str, indent_col: int) -> str:
-    if text.lower().startswith("fr") or text.lower().startswith("rf"):
-        prefix = text[:3]
-        quote = text[2]
-        content = text[3:-1]
-    else:
-        prefix = text[:2]
-        quote = text[1]
-        content = text[2:-1]
-
-    available = MAX_LINE_LENGTH - indent_col - len(prefix) - 1
-
-    chunks = []
-    current = content
-
-    while len(current) > available:
-        break_point = -1
-        depth = 0
-        scan_limit = min(len(current), available)
-        last_space = -1
-
-        for i in range(scan_limit):
-            char = current[i]
-            if char == "{":
-                depth += 1
-            elif char == "}":
-                depth -= 1
-            elif char == " " and depth == 0:
-                last_space = i
-
-        if last_space != -1:
-            break_point = last_space
-        else:
-            break
-
-        chunk = current[: break_point + 1]
-        chunks.append(chunk)
-        current = current[break_point + 1 :]
-        available = MAX_LINE_LENGTH - indent_col - len(prefix) - 1
-
-    chunks.append(current)
+    if current:
+        chunks.append(current)
 
     if len(chunks) == 1:
         return text
@@ -364,15 +366,63 @@ def split_f_string(text: str, indent_col: int) -> str:
     for i, chunk in enumerate(chunks):
         if i > 0:
             result += " \\\n" + " " * indent_col
-        result += f"{prefix}{chunk}{quote}"
+        result += f"{prefix}{quote}{chunk}{quote}"
+    return result
+
+
+def split_f_string(text: str, indent_col: int) -> str:
+    prefix, quote, content = _split_literal(text)
+    available = MAX_LINE_LENGTH - indent_col - len(prefix) - len(quote)
+
+    chunks: List[str] = []
+    current = content
+
+    while len(current) > available:
+        break_point = -1
+        depth = 0
+        last_space = -1
+        scan_limit = min(len(current), available)
+
+        for i, ch in enumerate(current[:scan_limit]):
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+            elif ch == " " and depth == 0:
+                last_space = i
+
+        if last_space == -1:
+            break
+
+        break_point = last_space
+        chunk = current[: break_point + 1]
+        chunks.append(chunk)
+        current = current[break_point + 1 :]
+
+        available = MAX_LINE_LENGTH - indent_col - len(prefix) - len(quote)
+
+    if current:
+        chunks.append(current)
+
+    if len(chunks) == 1:
+        return text
+
+    result = ""
+    for i, chunk in enumerate(chunks):
+        if i > 0:
+            result += " \\\n" + " " * indent_col
+        result += f"{prefix}{quote}{chunk}{quote}"
     return result
 
 
 def wrap_docstring(text: str, indent_col: int) -> str:
-    quote = text[:3]
-    content = text[3:-3]
+    # support prefixes like r"""..."""
+    prefix, quote, content = _split_literal(text)
+    if len(quote) != 3:
+        # not triple, defer to normal behavior
+        return text
 
-    width = MAX_LINE_LENGTH - indent_col - len(quote)
+    width = MAX_LINE_LENGTH - indent_col - len(prefix) - len(quote)
     if width < 20:
         width = 79
 
@@ -385,4 +435,30 @@ def wrap_docstring(text: str, indent_col: int) -> str:
             new_content += "\n" + " " * indent_col
         new_content += line
 
-    return f"{quote}{new_content}{quote}"
+    return f"{prefix}{quote}{new_content}{quote}"
+
+
+def wrap_comment(comment: str, indent_col: int) -> str:
+    """Wraps a long comment into multiple lines, preserving indentation."""
+    prefix = "# "
+    # Remove exactly one leading '#' (and one optional space), keep the rest
+    if comment.startswith("#"):
+        inner = comment[1:].lstrip()
+    else:
+        inner = comment.lstrip()
+
+    # Calculate available width for wrapping
+    width = MAX_LINE_LENGTH - indent_col - len(prefix)
+    if width < 20:
+        width = 79
+
+    # Wrap the comment content
+    wrapped = textwrap.fill(inner, width=width)
+    lines = wrapped.splitlines()
+
+    # Add indentation and prefix to each line
+    new_comment = "\n".join(
+        (" " * indent_col + prefix + line) for line in lines
+    )
+
+    return new_comment
