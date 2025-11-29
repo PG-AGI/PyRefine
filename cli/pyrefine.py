@@ -22,6 +22,7 @@ Project Contribution:
 """
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -70,6 +71,22 @@ def get_resource_root() -> Path:
 
 
 RESOURCE_ROOT = get_resource_root()
+APP_VERSION = "unknown"
+
+
+def _load_app_version(resource_root: Path) -> str:
+    manifest_path = resource_root / "release" / "manifest.json"
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return "unknown"
+    version = data.get("version")
+    if isinstance(version, str) and version.strip():
+        return version.strip()
+    return "unknown"
+
+
+APP_VERSION = _load_app_version(RESOURCE_ROOT)
 FORMAT_SCRIPT = RESOURCE_ROOT / "commands" / "clean" / "format.py"
 FLAKE8_TEMPLATE = RESOURCE_ROOT / "configs" / ".flake8"
 
@@ -137,6 +154,11 @@ def parse_args() -> argparse.Namespace:
             "PYREFINE_UPDATE_URL environment variable (if set)."
         ),
     )
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Print the current PyRefine version and exit.",
+    )
     args = parser.parse_args()
 
     actions = sum(
@@ -146,13 +168,16 @@ def parse_args() -> argparse.Namespace:
             1 if args.setup else 0,
             1 if args.test_coverage is not None else 0,
             1 if args.update else 0,
+            1 if args.version else 0,
         ]
     )
     if actions > 1:
         parser.error(
             "Please choose only one action at a time "
-            "(--create, --clean, --setup, --test-coverage, or --update)."
+            "(--create, --clean, --setup, --test-coverage, --update, or --version)."
         )
+    if args.version:
+        return args
     if args.update:
         return args  # no default action when explicitly updating
     if actions == 0:
@@ -240,6 +265,9 @@ def handle_update(args: argparse.Namespace) -> None:
 
 def main() -> None:
     args = parse_args()
+    if args.version:
+        print(f"PyRefine version {APP_VERSION}")
+        return
     if args.create:
         handle_create(args)
     elif args.clean is not None:
