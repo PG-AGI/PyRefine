@@ -105,10 +105,8 @@ def formatter_reference(project_root: Path, format_script: Path) -> str:
 def build_settings_payload(
     project_root: Path, format_script: Path
 ) -> dict[str, object]:
-    command = f'python "{
-        formatter_reference(
-            project_root,
-            format_script)}" "${{file}}"'
+    formatter_path = formatter_reference(project_root, format_script)
+    command = f'python "{formatter_path}" "${{file}}"'
     return {
         "editor.formatOnSave": True,
         "[python]": {
