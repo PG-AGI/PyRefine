@@ -34,15 +34,26 @@ def main() -> None:
     pyrefine_entry = root / "cli" / "pyrefine.py"
     format_script = root / "commands" / "clean" / "format.py"
     flake8_file = root / "configs" / ".flake8"
+    hidden_imports = [
+        "string_fixer",
+        "shared.common_vscode",
+        "shared.gitignore_utils",
+    ]
 
     datas: list[str] = []
+    hidden_args: list[str] = []
 
     def add_data(src: Path, dest: str) -> None:
         if src.exists():
             datas.extend(["--add-data", f"{src}{os.pathsep}{dest}"])
 
+    def add_hidden_import(module: str) -> None:
+        hidden_args.extend(["--hidden-import", module])
+
     add_data(format_script, "PyRefine/commands/clean")
     add_data(flake8_file, "PyRefine/configs")
+    for module in hidden_imports:
+        add_hidden_import(module)
 
     PyInstaller.__main__.run(
         [
@@ -51,6 +62,7 @@ def main() -> None:
             "--onefile",
             "--clean",
             *datas,
+            *hidden_args,
             str(pyrefine_entry),
         ]
     )
