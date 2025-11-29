@@ -66,6 +66,9 @@ def _read_json(path: Path) -> dict[str, object]:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
+        # Preserve existing files when they are not valid JSON so we never
+        # replace user settings outright. Callers can decide how to handle
+        # this scenario.
         return {}
 
 

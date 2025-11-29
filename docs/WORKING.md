@@ -66,15 +66,26 @@ This document explains the internal structure and the runtime flow of PyRefine.
 
    ### Flake8 config provisioning
 
-   - The clean workflow will try to copy a `.flake8` template from the resource root into the project root if one doesn't exist; if the bundled template doesn't exist, a minimal default `.flake8` is synthesized with sensible defaults and an exclude list that mirrors the tool ignores.
+- Validates target directories and runs `pytest` with coverage, one project at a time.
+- Stores raw artifacts under `pyrefine_artifacts/<project>/coverage` (per-run directories containing XML/HTML reports, summary, `.coverage` copy).
+- Publishes a user-facing HTML entry point under `<project>/pyrefine-test-coverage` so teams have a stable folder to open in the browser.
+- Provides consistent coverage outputs for CI and manual audits.
 
 4. --setup (VS Code + environments)
 
-   - Implemented by `commands/setup/setup_manager.py`.
-   - Writes/merges `.vscode/settings.json` and `extensions.json` by using payload helpers from `shared/common_vscode.py`.
-   - Provisions a pip virtual environment in `.venv` (creates it and uses it to install `requirements.txt` if present).
-   - Optionally provisions a UV environment for tools requiring the `uv` CLI (if found).
-   - Attempts to install the Pylance extension using the available `code` CLI; prints advice if automatic install fails.
+1. `cli/pyrefine.py::handle_test_coverage()`  
+   - Resolves the execution root (handles frozen executables with `_execution_project_root()`).  
+   - Loads `.gitignore`, ensures the target exists/is a directory/is not ignored.  
+   - Builds the list of project paths and calls `commands.test_coverage.coverage_runner.run_for_projects()`.
+2. `coverage_runner.run_for_projects()` iterates each project, printing status and calling `run_pytest_with_coverage()`.
+3. `run_pytest_with_coverage()`  
+   - Uses `_python_executable()` to select a real interpreter (system Python in frozen mode).  
+   - Creates a unique per-run directory under `pyrefine_artifacts/<project>/coverage` so previous runs remain available.  
+   - Executes `coverage run -m pytest`, then `coverage xml`, `coverage html`, and `coverage report` into that per-run directory.  
+   - Copies `.coverage` if present.  
+   - Calls the HTML publishing helper to mirror the generated HTML tree into `<project>/pyrefine-test-coverage`, keeping only:
+     - `index.html` (redirects to the latest report), and  
+     - a `report/` subfolder containing the full coverage HTML and assets.
 
    ### Setup specifics
 

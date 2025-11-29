@@ -202,10 +202,10 @@ def merge_run_on_save(
     commands = commands_obj.get("commands")
     if not isinstance(commands, list):
         return settings
-    desired_cmd = f'python "{
-            formatter_reference(
-                project_root,
-                format_script)}" "${file} "'
+    desired_cmd = (
+        f'python "{formatter_reference(project_root, format_script)}" '
+        '"${file}"'
+    )
     if any(
         isinstance(entry, dict) and entry.get("cmd") == desired_cmd
         for entry in commands

@@ -22,6 +22,7 @@ Project Contribution:
 
 """
 
+import datetime
 import os
 import shutil
 import subprocess
@@ -33,6 +34,7 @@ from shared.gitignore_utils import is_gitignored
 
 ARTIFACTS_DIRNAME = "pyrefine_artifacts"
 COVERAGE_SUBDIR = "coverage"
+PUBLISHED_HTML_DIRNAME = "pyrefine-test-coverage"
 IGNORED_PROJECT_NAMES = {
     ARTIFACTS_DIRNAME,
     ".git",
@@ -108,24 +110,101 @@ def project_artifact_dir(project_dir: Path) -> Path:
     return base
 
 
+def _coverage_run_dir(coverage_dir: Path) -> Path:
+    """
+    Create a unique subdirectory for a single coverage run so previous runs
+     remain available. The parent coverage directory itself is never removed.
+    """
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    run_dir = coverage_dir / f"run-{timestamp}"
+    counter = 1
+    while run_dir.exists():
+        run_dir = coverage_dir / f"run-{timestamp}-{counter}"
+        counter += 1
+    run_dir.mkdir(parents=True, exist_ok=False)
+    return run_dir
+
+
+def _published_html_root(project_dir: Path) -> Path:
+    """
+    Ensure the user-facing coverage folder exists at the project root.
+
+    The layout is:
+        <project>/pyrefine-test-coverage/
+            index.html
+            report/  (full HTML report and assets)
+    """
+    root = project_dir / PUBLISHED_HTML_DIRNAME
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def _publish_html_report(project_dir: Path, html_dir: Path) -> Path:
+    """
+    Copy the generated HTML report into the public `pyrefine-test-coverage`
+     folder so users have a stable entry point.
+
+    Inside `pyrefine-test-coverage` we keep only:
+        - index.html
+        - a single `report/` subfolder containing the full coverage HTML tree.
+    """
+    if not html_dir.exists():
+        raise CoverageError(
+            f"Expected coverage HTML directory at {html_dir}, but it "
+            "was not created."
+        )
+
+    published_root = _published_html_root(project_dir)
+
+    # Clear previous contents inside the published root, but never remove
+    # the root directory itself.
+    for child in published_root.iterdir():
+        if child.is_file():
+            child.unlink()
+        elif child.is_dir():
+            shutil.rmtree(child, ignore_errors=True)
+
+    report_dir = published_root / "report"
+    shutil.copytree(html_dir, report_dir)
+
+    index_path = published_root / "index.html"
+    index_html = (
+        "<!DOCTYPE html>\n"
+        "<html lang=\"en\">\n"
+        "<head>\n"
+        "  <meta charset=\"utf-8\" />\n"
+        "  <title>PyRefine Test Coverage</title>\n"
+        "  <meta http-equiv=\"refresh\" content=\"0; url=report/index.html\" />\n"
+        "  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" />\n"
+        "</head>\n"
+        "<body>\n"
+        "  <p>If you are not redirected automatically, "
+        '<a href="report/index.html">open the coverage report</a>.</p>\n'
+        "</body>\n"
+        "</html>\n"
+    )
+    index_path.write_text(index_html, encoding="utf-8")
+
+    return published_root
+
+
 def run_pytest_with_coverage(project_dir: Path) -> Path:
     coverage_dir = project_artifact_dir(project_dir)
-    shutil.rmtree(coverage_dir, ignore_errors=True)
-    coverage_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = _coverage_run_dir(coverage_dir)
 
     python_exec = _python_executable()
     env = os.environ.copy()
     run_cmd = [python_exec, "-m", "coverage", "run", "-m", "pytest"]
     subprocess.run(run_cmd, cwd=project_dir, check=True, env=env)
 
-    xml_path = coverage_dir / "coverage.xml"
+    xml_path = run_dir / "coverage.xml"
     subprocess.run(
         [python_exec, "-m", "coverage", "xml", "-o", str(xml_path)],
         cwd=project_dir,
         check=True,
     )
 
-    html_dir = coverage_dir / "coverage_html_report"
+    html_dir = run_dir / "coverage_html_report"
     subprocess.run(
         [python_exec, "-m", "coverage", "html", "-d", str(html_dir)],
         cwd=project_dir,
@@ -140,13 +219,15 @@ def run_pytest_with_coverage(project_dir: Path) -> Path:
         text=True,
         check=True,
     )
-    (coverage_dir / "summary.txt").write_text(report.stdout, encoding="utf-8")
+    (run_dir / "summary.txt").write_text(report.stdout, encoding="utf-8")
 
     coverage_file = project_dir / ".coverage"
     if coverage_file.exists():
-        shutil.copy2(coverage_file, coverage_dir / ".coverage")
+        shutil.copy2(coverage_file, run_dir / ".coverage")
 
-    return coverage_dir
+    _publish_html_report(project_dir, html_dir)
+
+    return run_dir
 
 
 def run_for_projects(projects: Iterable[Path]) -> None:
@@ -154,10 +235,10 @@ def run_for_projects(projects: Iterable[Path]) -> None:
     for project_dir in projects:
         ran_any = True
         print(f"[coverage] Running tests for {project_dir}")
-        run_pytest_with_coverage(project_dir)
+        run_dir = run_pytest_with_coverage(project_dir)
         print(
             "[coverage] Reports saved to "
-            f"{project_artifact_dir(project_dir)}"
+            f"{project_artifact_dir(project_dir)} (latest run: {run_dir})"
         )
     if not ran_any:
         raise CoverageError("No projects were provided for coverage.")
