@@ -7,20 +7,25 @@ The prebuilt executables live on the GitHub Releases page. Replace `v1.2` with t
 **Windows**
 ```powershell
 curl -L -o pyrefine.exe https://github.com/PG-AGI/PyRefine/releases/download/v1.2/pyrefine.exe
+
 pyrefine.exe --version
 ```
 
 **macOS**
 ```bash
 curl -L -o pyrefine-macos https://github.com/PG-AGI/PyRefine/releases/download/v1.2/pyrefine-macos
+
 chmod +x pyrefine-macos
+
 ./pyrefine-macos --version
 ```
 
 **Ubuntu/Linux**
 ```bash
 curl -L -o pyrefine-linux https://github.com/PG-AGI/PyRefine/releases/download/v1.2/pyrefine-linux
+
 chmod +x pyrefine-linux
+
 ./pyrefine-linux --version
 ```
 
@@ -33,7 +38,9 @@ If the executable is stored outside the project root, pass `--project-root PATH_
 2. Run the initializers:
    ```bash
    pyrefine --create
+   
    pyrefine --setup
+   
    pyrefine --clean .
    ```
    (On Windows use `pyrefine.exe`.)
@@ -44,7 +51,9 @@ If the executable is stored outside the project root, pass `--project-root PATH_
 2. Apply the cleanup workflow:
    ```bash
    pyrefine --setup
+   
    pyrefine --clean .
+   
    pyrefine --test-coverage   # optional validation
    ```
 
