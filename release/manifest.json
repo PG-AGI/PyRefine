@@ -1,18 +1,18 @@
 {
-  "version": "1.2",
+  "version": "1.0",
   "artifacts": {
     "windows": {
-      "url": "https://github.com/PG-AGI/PyRefine/releases/download/v1.2/pyrefine.exe",
+      "url": "https://github.com/PG-AGI/PyRefine/releases/download/v1.0/pyrefine.exe",
       "checksum": "sha256:97496eb6dbef5ffa635dbf0b883eb988ae4e640ee25cab6206b2bed0443ccc3f"
     },
     "macos": {
-      "url": "https://github.com/PG-AGI/PyRefine/releases/download/v1.2/pyrefine-macos",
+      "url": "https://github.com/PG-AGI/PyRefine/releases/download/v1.0/pyrefine-macos",
       "checksum": "sha256:f22d101dabcb0f9db9ae91db76c8367420772b2312f9f82c7c28ec14a1767a22"
     },
     "linux": {
-      "url": "https://github.com/PG-AGI/PyRefine/releases/download/v1.2/pyrefine-linux",
+      "url": "https://github.com/PG-AGI/PyRefine/releases/download/v1.0/pyrefine-linux",
       "checksum": "sha256:12bfae3d5c64f7e464136a913a8d9f1f8cfce9c15e3eeb1b70d301145353120a"
     }
   },
-  "release_notes": "Updated to version 1.2 with improved features and bug fixes."
+  "release_notes": "Initial public release of PyRefine v1.0 with cross-platform binaries, project bootstrap/cleanup workflows, and documented download/update instructions."
 }

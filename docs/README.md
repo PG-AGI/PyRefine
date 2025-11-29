@@ -2,24 +2,24 @@
 
 ## 1. Download the latest binary
 
-The prebuilt executables live on the GitHub Releases page. Replace `v1.2` with the newest tag when needed.
+The prebuilt executables live on the GitHub Releases page. Replace `v1.0` with the newest tag when needed.
 
 **Windows**
 ```powershell
-curl -L -o pyrefine.exe https://github.com/PG-AGI/PyRefine/releases/download/v1.2/pyrefine.exe
+curl -L -o pyrefine.exe https://github.com/PG-AGI/PyRefine/releases/download/v1.0/pyrefine.exe
 pyrefine.exe --version
 ```
 
 **macOS**
 ```bash
-curl -L -o pyrefine-macos https://github.com/PG-AGI/PyRefine/releases/download/v1.2/pyrefine-macos
+curl -L -o pyrefine-macos https://github.com/PG-AGI/PyRefine/releases/download/v1.0/pyrefine-macos
 chmod +x pyrefine-macos
 ./pyrefine-macos --version
 ```
 
 **Ubuntu/Linux**
 ```bash
-curl -L -o pyrefine-linux https://github.com/PG-AGI/PyRefine/releases/download/v1.2/pyrefine-linux
+curl -L -o pyrefine-linux https://github.com/PG-AGI/PyRefine/releases/download/v1.0/pyrefine-linux
 chmod +x pyrefine-linux
 ./pyrefine-linux --version
 ```
