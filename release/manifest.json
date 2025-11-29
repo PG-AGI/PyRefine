@@ -1,18 +1,18 @@
 {
-  "version": "1.1",
+  "version": "1.2",
   "artifacts": {
     "windows": {
-      "url": "https://github.com/PG-AGI/PyRefine/releases/download/1.1/pyrefine.exe",
-      "checksum": "sha256:TODO_WINDOWS_SHA"
+      "url": "https://github.com/PG-AGI/PyRefine/releases/download/v1.2/pyrefine.exe",
+      "checksum": "sha256:97496eb6dbef5ffa635dbf0b883eb988ae4e640ee25cab6206b2bed0443ccc3f"
     },
     "macos": {
-      "url": "https://github.com/PG-AGI/PyRefine/releases/download/1.1/pyrefine-macos",
-      "checksum": "sha256:TODO_MAC_SHA"
+      "url": "https://github.com/PG-AGI/PyRefine/releases/download/v1.2/pyrefine-macos",
+      "checksum": "sha256:f22d101dabcb0f9db9ae91db76c8367420772b2312f9f82c7c28ec14a1767a22"
     },
     "linux": {
-      "url": "https://github.com/PG-AGI/PyRefine/releases/download/1.1/pyrefine-linux",
-      "checksum": "sha256:TODO_LINUX_SHA"
+      "url": "https://github.com/PG-AGI/PyRefine/releases/download/v1.2/pyrefine-linux",
+      "checksum": "sha256:12bfae3d5c64f7e464136a913a8d9f1f8cfce9c15e3eeb1b70d301145353120a"
     }
   },
-  "release_notes": "Updated to version 1.1 with improved features and bug fixes."
+  "release_notes": "Updated to version 1.2 with improved features and bug fixes."
 }
